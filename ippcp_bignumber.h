@@ -1,7 +1,7 @@
 #if !defined _BIGNUMBER_H_
 #define _BIGNUMBER_H_
 
-#include "ippcp.h"
+#include <ippcp.h>
 
 #include <iostream>
 #include <vector>

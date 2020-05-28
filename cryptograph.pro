@@ -16,10 +16,16 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    ege_crypt.cpp \
+    ege_error.cpp \
+    ippcp_bignumber.cpp \
     main.cpp \
     mainwindow.cpp
 
 HEADERS += \
+    ege_crypt.h \
+    ege_error.h \
+    ippcp_bignumber.h \
     mainwindow.h
 
 FORMS += \
