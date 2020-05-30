@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "ege_crypt.h"
 
 namespace ege {

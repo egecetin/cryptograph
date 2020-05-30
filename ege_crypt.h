@@ -2,7 +2,6 @@
 
 #include "ege_error.h"
 #include "ippcp_bignumber.h"
-
 #include <ippcp.h>
 
 #ifdef _WIN32

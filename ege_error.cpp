@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "ege_error.h"
 
 namespace ege {
