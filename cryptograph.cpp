@@ -1,6 +1,6 @@
 #include "cryptograph.h"
 
-ege::RSA_Crypt::RSA_Crypt(int bitsize, Ipp32u *private_key, size_t privateSize, Ipp32u *public_key, size_t publicSize)
+ege::RSA_Crypt::RSA_Crypt(const int bitsize, Ipp32u *private_key, size_t privateSize, Ipp32u *public_key, size_t publicSize)
 {
 	ERR_STATUS status = ippStsNoErr;
 
@@ -76,6 +76,12 @@ ege::RSA_Crypt::RSA_Crypt(int bitsize, Ipp32u *private_key, size_t privateSize, 
 		std::cout << privateExp << std::endl << std::endl;
 		#endif // _DEBUG
 
+		// Overwrite
+		sourcePExp = BigNumber::Zero();
+		modulus = BigNumber::Zero();
+		publicExp = BigNumber::Zero();
+		privateExp = BigNumber::Zero();
+
 	}
 	else if (private_key == nullptr && public_key!=nullptr) {
 		
@@ -102,6 +108,10 @@ ege::RSA_Crypt::RSA_Crypt(int bitsize, Ipp32u *private_key, size_t privateSize, 
 		if (status != ippStsNoErr)
 			throw runtime_error(ege::sterror(status, IPP_ID));
 		this->buffer = new Ipp8u[ctxSize];
+
+		// Overwrite
+		modulus = BigNumber::Zero();
+		publicExp = BigNumber::Zero();
 	}
 	else if (public_key == nullptr && private_key!=nullptr) {
 		
@@ -128,6 +138,13 @@ ege::RSA_Crypt::RSA_Crypt(int bitsize, Ipp32u *private_key, size_t privateSize, 
 		if (status != ippStsNoErr)
 			throw runtime_error(ege::sterror(status, IPP_ID));
 		this->buffer = new Ipp8u[ctxSize];
+
+		// Overwrite
+		p = BigNumber::Zero();
+		q = BigNumber::Zero();
+		dP = BigNumber::Zero();
+		dQ = BigNumber::Zero();
+		invQ = BigNumber::Zero();
 	}
 	else {
 		// Split modulus and publicExp
@@ -171,17 +188,109 @@ ege::RSA_Crypt::RSA_Crypt(int bitsize, Ipp32u *private_key, size_t privateSize, 
 		if (status != ippStsNoErr)
 			throw runtime_error(ege::sterror(status, IPP_ID));
 		this->buffer = new Ipp8u[ctxSize];
+
+		// Overwrite
+		p = BigNumber::Zero();
+		q = BigNumber::Zero();
+		dP = BigNumber::Zero();
+		dQ = BigNumber::Zero();
+		invQ = BigNumber::Zero();
 	}
 }
 
-ERR_STATUS ege::RSA_Crypt::encrypt()
+void ege::RSA_Crypt::printKeys()
 {
-	return ERR_STATUS();
+	std::cout << "-----------------------------------------------------------------------------------------" << std::endl;
+
+	if (this->publicKey != nullptr) {
+		BigNumber modulus, publicExp;
+
+		ippsRSA_GetPublicKey(modulus, publicExp, this->publicKey);
+		
+		std::cout << "Modulus (" << modulus.BitSize() << ")" << std::endl;
+		std::cout << modulus << std::endl << std::endl;
+
+		std::cout << "Public exponential (" << publicExp.BitSize() << ")" << std::endl;
+		std::cout << publicExp << std::endl << std::endl;
+
+		modulus = BigNumber::Zero();
+		publicExp = BigNumber::Zero();
+	}
+	if (this->privateKey != nullptr) {
+		BigNumber p, q, dP, dQ, invQ;
+
+		ippsRSA_GetPrivateKeyType2(p, q, dP, dQ, invQ, this->privateKey);
+
+		std::cout << "P (" << p.BitSize() << ")" << std::endl;
+		std::cout << p << std::endl << std::endl;
+
+		std::cout << "Q (" << q.BitSize() << ")" << std::endl;
+		std::cout << q << std::endl << std::endl;
+
+		std::cout << "dP (" << dP.BitSize() << ")" << std::endl;
+		std::cout << dP << std::endl << std::endl;
+
+		std::cout << "dQ (" << dQ.BitSize() << ")" << std::endl;
+		std::cout << dQ << std::endl << std::endl;
+
+		std::cout << "invQ (" << invQ.BitSize() << ")" << std::endl;
+		std::cout << invQ << std::endl << std::endl;
+
+		p = BigNumber::Zero();
+		q = BigNumber::Zero();
+		dP = BigNumber::Zero();
+		dQ = BigNumber::Zero();
+		invQ = BigNumber::Zero();
+	}
+
+	std::cout << "-----------------------------------------------------------------------------------------" << std::endl;
+
 }
 
-ERR_STATUS ege::RSA_Crypt::decrypt()
+ERR_STATUS ege::RSA_Crypt::saveKeys(const std::string filepath)
 {
-	return ERR_STATUS();
+	fstream fptr;
+	fptr.open(filepath.c_str(), std::fstream::out | std::fstream::trunc);
+
+	if (fptr.is_open()) {
+		fptr << "-----------------------------------------------------------------------------------------" << std::endl;
+		if (this->publicKey != nullptr) {
+			BigNumber modulus, publicExp;
+
+			ippsRSA_GetPublicKey(modulus, publicExp, this->publicKey);
+
+			fptr << "Modulus (" << modulus.BitSize() << ")" << std::endl;
+			fptr << modulus << std::endl << std::endl;
+
+			fptr << "Public exponential (" << publicExp.BitSize() << ")" << std::endl;
+			fptr << publicExp << std::endl << std::endl;
+
+			modulus = BigNumber::Zero();
+			publicExp = BigNumber::Zero();
+		}
+		if (this->privateKey != nullptr) {
+			BigNumber p, q;
+
+			ippsRSA_GetPrivateKeyType2(p, q, nullptr, nullptr, nullptr, this->privateKey);
+
+			fptr << "P (" << p.BitSize() << ")" << std::endl;
+			fptr << p << std::endl << std::endl;
+
+			fptr << "Q (" << q.BitSize() << ")" << std::endl;
+			fptr << q << std::endl << std::endl;
+
+			p = BigNumber::Zero();
+			q = BigNumber::Zero();
+		}
+		fptr << "-----------------------------------------------------------------------------------------" << std::endl;
+		fptr.close();
+		
+		return ippStsNoErr;
+	}
+	else {
+		return ippStsNoOperation;
+	}
+
 }
 
 ege::RSA_Crypt::~RSA_Crypt()

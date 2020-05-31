@@ -15,15 +15,15 @@ namespace ege {
 		// Variables
 		IppsRSAPrivateKeyState *privateKey = nullptr;
 		IppsRSAPublicKeyState *publicKey = nullptr;
-		int bitsize;
+		int bitsize = 0;
 
 		// Functions
-		RSA_Crypt(int bitsize, Ipp32u *private_key = nullptr, size_t privateSize = 0, Ipp32u *public_key = nullptr, size_t publicSize = 0);
-		ERR_STATUS printKeys();
-		ERR_STATUS saveKeys();
-		ERR_STATUS encrypt();
-		ERR_STATUS decrypt();
-
+		RSA_Crypt(const int bitsize, Ipp32u *private_key = nullptr, size_t privateSize = 0, Ipp32u *public_key = nullptr, size_t publicSize = 0);
+		void printKeys();
+		ERR_STATUS readKeys(const std::string filepath);
+		ERR_STATUS saveKeys(const std::string filepath);
+		ERR_STATUS encryptMessage();
+		ERR_STATUS decryptMessage();
 		~RSA_Crypt();
 
 	private:
