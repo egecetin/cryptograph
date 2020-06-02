@@ -12,9 +12,10 @@ ege::RSA_Crypt::RSA_Crypt(const int bitsize, Ipp32u *private_key, size_t private
 	this->bitsQ = this->bitsize - this->bitsP;
 	this->generate_RandomGenerator(160, this->pRNG);		// Init random generator
 	this->generate_PrimeGenerator(this->bitsize, this->pPG);// Init prime number generator
-	
+	this->seed = rand32(256 / 32);
+
 	if (private_key == nullptr && public_key == nullptr) {
-				
+
 		BigNumber sourcePExp(rand32(1), 1, IppsBigNumPOS);										// Source of public exponential
 		BigNumber modulus(rand32(this->bitsize / 32), this->bitsize / 32, IppsBigNumPOS);		// Modulus
 		BigNumber publicExp(rand32(this->bitsize / 32), this->bitsize / 32, IppsBigNumPOS);		// Public exponential
@@ -64,7 +65,7 @@ ege::RSA_Crypt::RSA_Crypt(const int bitsize, Ipp32u *private_key, size_t private
 		if (ctxSize == IS_INVALID_KEY)
 			throw runtime_error(ege::sterror(ippStsContextMatchErr, IPP_ID));
 
-		#ifdef _DEBUG
+#ifdef _DEBUG
 		std::cout << "-----------------------------------------------------------------------------------------" << std::endl;
 		std::cout << "Modulus (" << modulus.BitSize() << ")" << std::endl;
 		std::cout << modulus << std::endl << std::endl;
@@ -74,7 +75,7 @@ ege::RSA_Crypt::RSA_Crypt(const int bitsize, Ipp32u *private_key, size_t private
 
 		std::cout << "Private exponential (" << privateExp.BitSize() << ")" << std::endl;
 		std::cout << privateExp << std::endl << std::endl;
-		#endif // _DEBUG
+#endif // _DEBUG
 
 		// Overwrite
 		sourcePExp = BigNumber::Zero();
@@ -83,8 +84,8 @@ ege::RSA_Crypt::RSA_Crypt(const int bitsize, Ipp32u *private_key, size_t private
 		privateExp = BigNumber::Zero();
 
 	}
-	else if (private_key == nullptr && public_key!=nullptr) {
-		
+	else if (private_key == nullptr && public_key != nullptr) {
+
 		// Split modulus and publicExp
 		BigNumber modulus(&public_key[0], this->bitsize / 32, IppsBigNumPOS);
 		BigNumber publicExp(&public_key[this->bitsize / 32], publicSize - this->bitsize / 32, IppsBigNumPOS);
@@ -94,7 +95,7 @@ ege::RSA_Crypt::RSA_Crypt(const int bitsize, Ipp32u *private_key, size_t private
 		if (status != ippStsNoErr)
 			throw runtime_error(ege::sterror(status, IPP_ID));
 
-		this->publicKey = (IppsRSAPublicKeyState*)(new Ipp8u[ctxSize]);		
+		this->publicKey = (IppsRSAPublicKeyState*)(new Ipp8u[ctxSize]);
 
 		status = ippsRSA_InitPublicKey(modulus.BitSize(), publicExp.BitSize(), this->publicKey, ctxSize);
 		if (status != ippStsNoErr)
@@ -113,8 +114,8 @@ ege::RSA_Crypt::RSA_Crypt(const int bitsize, Ipp32u *private_key, size_t private
 		modulus = BigNumber::Zero();
 		publicExp = BigNumber::Zero();
 	}
-	else if (public_key == nullptr && private_key!=nullptr) {
-		
+	else if (public_key == nullptr && private_key != nullptr) {
+
 		// Split p and q
 		BigNumber p(&private_key[0], this->bitsP / 32, IppsBigNumPOS);
 		BigNumber q(&private_key[this->bitsP / 32], this->bitsQ / 32, IppsBigNumPOS);
@@ -206,7 +207,7 @@ void ege::RSA_Crypt::printKeys()
 		BigNumber modulus, publicExp;
 
 		ippsRSA_GetPublicKey(modulus, publicExp, this->publicKey);
-		
+
 		std::cout << "Modulus (" << modulus.BitSize() << ")" << std::endl;
 		std::cout << modulus << std::endl << std::endl;
 
@@ -247,10 +248,31 @@ void ege::RSA_Crypt::printKeys()
 
 }
 
+ERR_STATUS ege::RSA_Crypt::readKeys(const std::string filepath)
+{
+	std::ifstream fptr(filepath.c_str(), std::fstream::in);
+
+	if (fptr.is_open()) {
+		std::string line;
+		std::getline(fptr, line);
+		while (std::getline(fptr, line)) {
+			if (line.find("Modulus") != std::string::npos) {
+
+			}
+			else if () {
+
+			}
+		}
+
+	}
+
+
+	return ippStsNoErr;
+}
+
 ERR_STATUS ege::RSA_Crypt::saveKeys(const std::string filepath)
 {
-	fstream fptr;
-	fptr.open(filepath.c_str(), std::fstream::out | std::fstream::trunc);
+	fstream fptr(filepath.c_str(), std::fstream::out | std::fstream::trunc);
 
 	if (fptr.is_open()) {
 		fptr << "-----------------------------------------------------------------------------------------" << std::endl;
@@ -284,13 +306,23 @@ ERR_STATUS ege::RSA_Crypt::saveKeys(const std::string filepath)
 		}
 		fptr << "-----------------------------------------------------------------------------------------" << std::endl;
 		fptr.close();
-		
+
 		return ippStsNoErr;
 	}
 	else {
 		return ippStsNoOperation;
 	}
 
+}
+
+ERR_STATUS ege::RSA_Crypt::encryptMessage(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphertext, Ipp8u *label, int lenlabel)
+{
+	return ippsRSAEncrypt_OAEP(msg, lenmsg, label, lenlabel, (Ipp8u*)this->seed, ciphertext, this->publicKey, ippHashAlg_SHA512_256, this->buffer);
+}
+
+ERR_STATUS ege::RSA_Crypt::decryptMessage(Ipp8u *&ciphertext, Ipp8u *&msg, int &lenmsg, Ipp8u *label, int lenlabel)
+{
+	return ippsRSADecrypt_OAEP(ciphertext, label, lenlabel, msg, &lenmsg, this->privateKey, ippHashAlg_SHA512_256, this->buffer);
 }
 
 ege::RSA_Crypt::~RSA_Crypt()
@@ -315,7 +347,7 @@ ege::RSA_Crypt::~RSA_Crypt()
 		delete[](Ipp8u*)this->publicKey;
 		this->publicKey = nullptr;
 	}
-	
+
 	delete[](Ipp8u*)buffer;
 	delete[](Ipp8u*)this->pPG;
 	delete[](Ipp8u*)this->pRNG;
@@ -352,7 +384,7 @@ inline void ege::RSA_Crypt::generate_RandomGenerator(int seedbits, IppsPRNGState
 		status = ippsPRNGSetSeed(seed, pRNG);
 		if (status != ippStsNoErr)
 			throw runtime_error(ege::sterror(status, IPP_ID));
-	}	
+	}
 	else {
 		BigNumber seed(rand32(seedbits / 32), seedbits / 32, IppsBigNumPOS);
 		status = ippsPRNGSetSeed(seed, pRNG);
@@ -367,5 +399,63 @@ inline Ipp32u* ege::RSA_Crypt::rand32(int size)
 	std::srand(std::time(nullptr)); // Seed with current time
 	for (int n = 0; n < size; n++)
 		pX[n] = (rand() << 16) + rand();
+	return pX;
+}
+
+ege::AES_Crypt::AES_Crypt(Ipp8u* pkey)
+{
+	ERR_STATUS status = ippStsNoErr;
+	int ctxSize = 0;
+
+	status = ippsAESGetSize(&ctxSize);
+	if (status != ippStsNoErr)
+		throw runtime_error(ege::sterror(status, IPP_ID));
+	this->key = (IppsAESSpec*)(new Ipp8u[ctxSize]);
+	this->ctr = new Ipp8u[16];
+
+	if (pkey == nullptr) {
+		pkey = rand8(256 / 8);
+	}
+
+	status = ippsAESInit(pkey, 256 / 8, key, ctxSize);
+	if (status != ippStsNoErr)
+		throw runtime_error(ege::sterror(status, IPP_ID));
+}
+
+ERR_STATUS ege::AES_Crypt::encrypt(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphertext, Ipp8u *ctr, int ctrBitLen)
+{
+	if (ctr == nullptr)
+		return ippsAESEncryptCTR(msg, ciphertext, lenmsg, this->key, this->ctr, 16 * sizeof(Ipp8u));
+	else
+		return ippsAESEncryptCTR(msg, ciphertext, lenmsg, this->key, ctr, ctrBitLen);
+}
+
+ERR_STATUS ege::AES_Crypt::decrypt(Ipp8u *&ciphertext, Ipp8u *&msg, int &lenmsg, Ipp8u *ctr, int ctrBitLen)
+{
+	if (ctr == nullptr)
+		return ippsAESDecryptCTR(ciphertext, msg, lenmsg, this->key, this->ctr, 16 * sizeof(Ipp8u));
+	else
+		return ippsAESDecryptCTR(ciphertext, msg, lenmsg, this->key, ctr, ctrBitLen);
+}
+
+ege::AES_Crypt::~AES_Crypt()
+{
+	if (this->key != nullptr) {
+		int ctxSize;
+		ippsAESGetSize(&ctxSize);
+		ippsAESInit(nullptr, 256 / 8, key, ctxSize);
+		delete[](Ipp8u*)this->key;
+		this->key = nullptr;
+	}
+
+	delete[] this->ctr;
+}
+
+inline Ipp8u* ege::AES_Crypt::rand8(int size)
+{
+	Ipp8u* pX = new Ipp8u[size];
+	std::srand(std::time(nullptr)); // Seed with current time
+	for (int n = 0; n < size; ++n)
+		pX[n] = rand();
 	return pX;
 }
