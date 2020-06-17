@@ -15,21 +15,24 @@ typedef int ERR_STATUS;
 #define VSLCC_ID	4
 #define GEN_ID		5
 
+/* General Error Code Definitions */
+#define NO_ERROR				0
+
 /* OpenCL Error Codes*/
-#define OPENCL_SUCCESS			0
 #define OPENCL_NOT_AVAILABLE	1
 #define OPENCL_CONTEXT_FAIL		2
 #define OPENCL_NO_DEVICE		3
 
 /* CUDA Error Codes */
-#define CUDA_SUCCESS			0
-#define CUDA_NOT_AVAILABLE		11
-#define CUDA_NO_DRIVER			12
-#define CUDA_CONTEXT_FAIL		13
+#define CUDA_NOT_AVAILABLE		10
+#define CUDA_NO_DRIVER			11
+#define CUDA_CONTEXT_FAIL		12
 
 /* OpenCV Error Codes*/
-#define OPENCV_SUCCESS			0
-#define OPENCV_VIDEO_ERROR		21
+#define OPENCV_VIDEO_ERROR		20
+
+/* IPP Cryptography Codes */
+#define IPPCP_BITSIZE_MISMATCH	30
 
 namespace ege {
 

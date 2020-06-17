@@ -1,38 +1,62 @@
 #pragma once
 
-#include <string>
+#ifndef CRYPTOGRAPH_EGE
+#define CRYPTOGRAPH_EGE
+#endif
 
-#include "ege_error.h"
+#include "logger.h"
 #include "ippcp_bignumber.h"
 #include <ippcp.h>
+#include <string>
 
 constexpr auto N_TRIAL = 10;
 constexpr auto MAX_TRIAL = 25;
 
 namespace ege {
 	
+	/*******************************************************************************************/
+	/*************************************** Definitions ***************************************/
+	/*******************************************************************************************/
+
+	enum CRYPTO_METHOD
+	{
+		NO_ENCRYPT,
+		AES,
+		SMS4,
+		RSA,
+		ECCP
+	};
+
+	/*******************************************************************************************/
+	/****************************************** Class ******************************************/
+	/*******************************************************************************************/
+
+
+	/******************************************* RSA *******************************************/
 	class RSA_Crypt
 	{
 	public:
 		// Variables
-		IppsRSAPrivateKeyState *privateKey = nullptr;
-		IppsRSAPublicKeyState *publicKey = nullptr;
 		int bitsize = 0;
 
 		// Functions
-		RSA_Crypt(const int bitsize, Ipp32u *private_key = nullptr, size_t privateSize = 0, Ipp32u *public_key = nullptr, size_t publicSize = 0);
+		RSA_Crypt(const int bitsize, Ipp8u *private_key = nullptr, size_t privateSize = 0, Ipp8u *public_key = nullptr, size_t publicSize = 0);
+		ERR_STATUS setKey(int key_type, Ipp8u *key, size_t keySize);
 		ERR_STATUS encryptMessage(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphertext, Ipp8u *label = nullptr, int lenlabel = 0);
 		ERR_STATUS decryptMessage(Ipp8u *&ciphertext, Ipp8u *&msg, int &lenmsg, Ipp8u *label = nullptr, int lenlabel = 0);
+		ERR_STATUS getKey(int key_type, Ipp8u *key);
 
-		// Only for Debug
+#ifdef _DEBUG
 		void printKeys();
 		ERR_STATUS readKeys(const std::string filepath);
 		ERR_STATUS saveKeys(const std::string filepath);
-
+#endif
 		~RSA_Crypt();
 
 	private:
 		// Variables
+		IppsRSAPrivateKeyState *privateKey = nullptr;
+		IppsRSAPublicKeyState *publicKey = nullptr;
 		IppsPrimeState* pPG;
 		IppsPRNGState* pRNG;
 		Ipp32u* seed;
@@ -45,6 +69,8 @@ namespace ege {
 		inline Ipp32u* rand32(int size);
 	};
 
+
+	/************************************** Elliptic Curve **************************************/
 	class ECCP_Crypt
 	{
 	public:
@@ -55,24 +81,64 @@ namespace ege {
 
 	};
 
+
+	/******************************************* AES *******************************************/
 	class AES_Crypt
 	{
 	public:
 		// Variables
-		IppsAESSpec* key = nullptr;
 
 		// Functions
 		AES_Crypt(Ipp8u* key = nullptr);
-		ERR_STATUS encrypt(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphertext, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
-		ERR_STATUS decrypt(Ipp8u *&ciphertext, Ipp8u *&msg, int &lenmsg, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
+		ERR_STATUS setKey(Ipp8u* key);
+		ERR_STATUS encryptMessage(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphertext, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
+		ERR_STATUS decryptMessage(Ipp8u *&ciphertext, Ipp8u *&msg, int &lenmsg, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
+		ERR_STATUS getKey(Ipp8u* key);
 		~AES_Crypt();
 
 	private:
 		// Variables
+		IppsAESSpec* key = nullptr;
 		Ipp8u* ctr = nullptr;
 
 		// Functions
 		inline Ipp8u* rand8(int size);
 	};
 
+
+	/******************************************* SMS4 *******************************************/
+	class SMS4_Crypt
+	{
+	public:
+		// Variables
+
+		// Functions
+		SMS4_Crypt();
+		~SMS4_Crypt();
+
+	private:
+		// Variables
+		IppsSMS4Spec* key = nullptr;
+		Ipp8u* ctr = nullptr;
+
+		// Functions
+	};
+
+	class Hash_Coder
+	{
+	public:
+		Hash_Coder(IppHashAlgId id);
+		inline ERR_STATUS update(Ipp8u* msg, size_t lenmsg);
+		inline ERR_STATUS getHash(Ipp8u* code);
+		~Hash_Coder();
+
+	private:
+		IppsHashState *context = nullptr;
+	};
+
+	/*******************************************************************************************/
+	/**************************************** Functions ****************************************/
+	/*******************************************************************************************/
+
+	
 }

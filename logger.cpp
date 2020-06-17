@@ -1,4 +1,4 @@
-#include "ege_error.h"
+#include "logger.h"
 
 namespace ege {
 
@@ -116,6 +116,7 @@ namespace ege {
 		}
 	}
 
+
 	inline const char* GeneralErrorMessage(ERR_STATUS code) {
 		switch (code) {
 		case OPENCL_NOT_AVAILABLE:
@@ -132,6 +133,8 @@ namespace ege {
 			return "Failed creating the context (CUDA).";
 		case OPENCV_VIDEO_ERROR:
 			return "Can't open video file.";
+		case IPPCP_BITSIZE_MISMATCH:
+			return "Bitsize mismatch at context.";
 		default:
 			return "Unknown error code";
 		}
