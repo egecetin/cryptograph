@@ -31,8 +31,12 @@ typedef int ERR_STATUS;
 /* OpenCV Error Codes*/
 #define OPENCV_VIDEO_ERROR		20
 
-/* IPP Cryptography Codes */
-#define IPPCP_BITSIZE_MISMATCH	30
+/* Cryptography & File Error Codes */
+#define CRYPT_BITSIZE_MISMATCH	30
+#define HASH_CHECK_FAIL			31
+#define FILE_NOT_SET			32
+#define FILE_NOT_EXIST			33
+#define FILE_ALREADY_EXIST		34
 
 namespace ege {
 
