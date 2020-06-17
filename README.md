@@ -2,4 +2,4 @@
  Cryptography example using Intel IPP
 
 
-Still under contruction
+Still under construction
