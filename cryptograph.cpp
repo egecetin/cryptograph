@@ -284,7 +284,7 @@ ERR_STATUS ege::RSA_Crypt::readKeys(const std::string filepath)
 
 		if (flag[0] == 1 && flag[1] == 1) { // Public key supplied
 			if (modulus.BitSize() != this->bitsize)
-				return IPPCP_BITSIZE_MISMATCH;
+				return CRYPT_BITSIZE_MISMATCH;
 
 			status = ippsRSA_SetPublicKey(modulus, publicExp, this->publicKey);
 			if (status != NO_ERROR)
@@ -296,7 +296,7 @@ ERR_STATUS ege::RSA_Crypt::readKeys(const std::string filepath)
 		
 		if (flag[2] == 1 && flag[3] == 1) { // Private key supplied
 			if (p.BitSize() + q.BitSize() != this->bitsize)
-				return IPPCP_BITSIZE_MISMATCH;
+				return CRYPT_BITSIZE_MISMATCH;
 
 			BigNumber dP, dQ, invQ;
 			status = ippsRSA_SetPrivateKeyType2(p, q, dP, dQ, invQ, this->privateKey);

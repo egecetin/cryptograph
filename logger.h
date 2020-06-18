@@ -32,11 +32,16 @@ typedef int ERR_STATUS;
 #define OPENCV_VIDEO_ERROR		20
 
 /* Cryptography & File Error Codes */
-#define CRYPT_BITSIZE_MISMATCH	30
-#define HASH_CHECK_FAIL			31
+#define FILE_NOT_SUPPORTED		30
+
 #define FILE_NOT_SET			32
 #define FILE_NOT_EXIST			33
 #define FILE_ALREADY_EXIST		34
+#define OVER_FILENAME_LIMIT		35
+
+#define CRYPT_NOT_SUPPORTED		40
+#define CRYPT_BITSIZE_MISMATCH	41
+#define HASH_CHECK_FAIL			42
 
 namespace ege {
 

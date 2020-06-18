@@ -12,6 +12,8 @@
 constexpr auto N_TRIAL = 10;
 constexpr auto MAX_TRIAL = 25;
 
+#define MAX_HASH_LEN 64
+
 namespace ege {
 	
 	/*******************************************************************************************/
