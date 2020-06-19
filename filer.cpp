@@ -32,12 +32,14 @@ ERR_STATUS ege::Filer::copy(char * pathSrc, char * pathDest)
 {
 	FILE *src = fopen(this->path, "rb");
 	FILE *dest = fopen(pathDest, "wb");
+	if (!(src && dest))
+		return FILE_INPUT_OUTPUT_ERR;
 
 	char buf[BUFSIZ];
 	size_t size;
 
-	while (size = fread(buf, BUFSIZ*sizeof(char), 1, src)) {
-		fwrite(buf, size*sizeof(char), 1, dest);
+	while (size = fread(buf, 1, BUFSIZ, src)) {
+		fwrite(buf, size, 1, dest);
 	}
 
 	fclose(src);
@@ -68,10 +70,13 @@ void ege::Filer::prepareHeader()
 ERR_STATUS ege::Filer::readHeader(char * pathSrc)
 {
 	FILE *fptr = fopen(pathSrc, "rb");
+	if (!fptr)
+		return FILE_INPUT_OUTPUT_ERR;
+
 	char buffer[5];
 	size_t size = 0;
 
-	fread(buffer, sizeof(char) * 5, 1, fptr);
+	fread(buffer, 5, 1, fptr);
 	if (strcmp(buffer, "EGE!"))
 		return FILE_NOT_SUPPORTED;
 	fread(&size, sizeof(size_t), 1, fptr); // Read size
@@ -79,7 +84,7 @@ ERR_STATUS ege::Filer::readHeader(char * pathSrc)
 	if (size == sizeof(ege::fileProperties)) { // HOST + CLIENT EQUAL
 		fread(&this->context, sizeof(ege::fileProperties), 1, fptr);
 		
-		fread(buffer, sizeof(char) * 5, 1, fptr);
+		fread(buffer, 5, 1, fptr);
 		if (strcmp(buffer, "END!"))
 			return FILE_NOT_SUPPORTED;
 	}
@@ -87,7 +92,7 @@ ERR_STATUS ege::Filer::readHeader(char * pathSrc)
 	else if (size < sizeof(ege::fileProperties)) { // HOST NORMAL + CLIENT CRYPT
 		fread(&this->context, size, 1, fptr);
 		
-		fread(buffer, sizeof(char) * 5, 1, fptr);
+		fread(buffer, 5, 1, fptr);
 		if (strcmp(buffer, "END!"))
 			return FILE_NOT_SUPPORTED;
 		
@@ -98,18 +103,20 @@ ERR_STATUS ege::Filer::readHeader(char * pathSrc)
 	else if (size > sizeof(ege::fileProperties)) { // HOST CRYPT + CLIENT NORMAL
 		fread(&this->context, sizeof(ege::fileProperties), 1, fptr);
 		
-		fread(buffer, sizeof(char) * 5, 1, fptr);
+		fread(buffer, 5, 1, fptr);
 		if (strcmp(buffer, "END!"))
-			return FILE_NOT_SUPPORTED;
-		
+			return FILE_NOT_SUPPORTED;		
 		if (this->context.crypto_check)
 			return CRYPT_NOT_SUPPORTED;
 	}
 }
 
-void ege::Filer::writeHeader(char * pathDest)
+ERR_STATUS ege::Filer::writeHeader(char * pathDest)
 {
 	FILE *fptr = fopen(pathDest,"wb");
+	if (!fptr)
+		return FILE_INPUT_OUTPUT_ERR;
+
 	size_t size = sizeof(ege::fileProperties);
 
 	fwrite("EGE!", sizeof(char) * 5, 1, fptr);	
@@ -164,7 +171,7 @@ const char * ege::Filer::strcrypttype(ege::CRYPTO_METHOD id)
 	switch (id)
 	{
 	case ege::CRYPTO_METHOD::NO_ENCRYPT:
-		return "0000";
+		return "    ";
 	case ege::CRYPTO_METHOD::AES:
 		return " AES";
 	case ege::CRYPTO_METHOD::SMS4:
@@ -176,6 +183,54 @@ const char * ege::Filer::strcrypttype(ege::CRYPTO_METHOD id)
 	default:
 		return "----";
 	}
+}
+ERR_STATUS ege::Filer::encrypt(char * pathSrc, char * pathDest)
+{
+	FILE *src = fopen(pathSrc, "rb");
+	FILE *dest = fopen(pathDest, "wb");
+	if (!(src && dest))
+		return FILE_INPUT_OUTPUT_ERR;
+
+	size_t size;
+	ERR_STATUS status = NO_ERROR;	
+	ege::Hash_Coder hasher(this->hash_type);
+	Ipp8u *buff = (Ipp8u*)malloc(sizeof(Ipp8u)*BUFSIZ);
+	Ipp8u *cipher = (Ipp8u*)malloc(sizeof(Ipp8u)*BUFSIZ);
+
+	switch (this->crypto_type)
+	{
+	case ege::CRYPTO_METHOD::AES:
+	{
+		AES_Crypt cryptograph(this->key);
+		while (size = fread(buff, 1, BUFSIZ, src)) {
+			if (status = hasher.update(buff, size))
+				break;
+			if (status = cryptograph.encryptMessage(buff, size, cipher))
+				break;
+			fwrite(cipher, size, 1, dest);
+		}
+	}
+	case ege::CRYPTO_METHOD::SMS4:
+
+	case ege::CRYPTO_METHOD::RSA:
+
+	case ege::CRYPTO_METHOD::ECCP:
+
+	default:
+		status = CRYPT_UNKNOWN_METHOD;
+	}
+
+	if (!status)
+		status = hasher.getHash(this->context.hashcode);
+		
+	for (size_t i = 0; i < BUFSIZ; ++i)
+		buff[i] = 0;
+	free(buff);
+	free(cipher);
+
+	fclose(src);
+	fclose(dest);
+	return status;
 }
 #endif
 
@@ -228,17 +283,16 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 	if (!overwrite && this->checkfile(pathDest))
 		return FILE_ALREADY_EXIST;
 
-	char *tempname = tmpnam(nullptr);
-	
 	this->prepareHeader();
-	
 
+	char *tempname = tmpnam(nullptr);
 	if (status = this->compress(this->path, tempname)) {
 		free(tempname);
 		return status;
 	}
 
 #ifdef CRYPTOGRAPH_EGE
+	// Check key is null?
 	if (status = this->encrypt(tempname, pathDest)) {
 		free(tempname);
 		return status;
@@ -247,7 +301,8 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 	pathDest[0] == tempname[0] ? rename(tempname, pathDest) : status = this->copy(tempname, pathDest);
 #endif // CRYPTOGRAPH_EGE
 	
-	// this->writeHeader(tempname); // <-------------------------
+	this->writeHeader(pathDest);
+
 	free(tempname);
 	return status;	
 }
@@ -260,17 +315,18 @@ ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 	if (!overwrite && this->checkfile(pathDest))
 		return FILE_ALREADY_EXIST;
 
-	char *tempname = tmpnam(nullptr);
-
-	this->readHeader(this->path);
+	if (status = this->readHeader(this->path) != NO_ERROR)
+		return status;
 	this->configFromHeader();
 
+	char *tempname = tmpnam(nullptr);
 	if (status = this->decompress(this->path, tempname)) {
 		free(tempname);
 		return status;
 	}
 
 #ifdef CRYPTOGRAPH_EGE
+	// Check key is null?
 	if (status = this->decrypt(tempname, pathDest)) {
 		free(tempname);
 		return status;

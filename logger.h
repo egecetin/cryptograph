@@ -33,7 +33,7 @@ typedef int ERR_STATUS;
 
 /* Cryptography & File Error Codes */
 #define FILE_NOT_SUPPORTED		30
-
+#define FILE_INPUT_OUTPUT_ERR	31
 #define FILE_NOT_SET			32
 #define FILE_NOT_EXIST			33
 #define FILE_ALREADY_EXIST		34
@@ -41,7 +41,8 @@ typedef int ERR_STATUS;
 
 #define CRYPT_NOT_SUPPORTED		40
 #define CRYPT_BITSIZE_MISMATCH	41
-#define HASH_CHECK_FAIL			42
+#define CRYPT_UNKNOWN_METHOD	42
+#define HASH_CHECK_FAIL			43
 
 namespace ege {
 

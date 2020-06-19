@@ -71,7 +71,7 @@ namespace ege {
 		ERR_STATUS copy(char* pathSrc, char* pathDest);
 		ERR_STATUS readHeader(char* pathSrc);
 		void prepareHeader();
-		void writeHeader(char* pathDest);
+		ERR_STATUS writeHeader(char* pathDest);
 		void configFromHeader();
 
 #ifdef CRYPTOGRAPH_EGE

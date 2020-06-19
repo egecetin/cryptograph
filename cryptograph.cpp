@@ -533,7 +533,7 @@ inline ERR_STATUS ege::Hash_Coder::update(Ipp8u * msg, size_t lenmsg)
 	return ippsHashUpdate(msg, lenmsg, this->context);
 }
 
-inline ERR_STATUS ege::Hash_Coder::getHash(Ipp8u * code)
+inline ERR_STATUS ege::Hash_Coder::getHash(Ipp8u *&code)
 {
 	return ippsHashFinal(code, this->context);
 }
