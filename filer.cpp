@@ -1,23 +1,23 @@
 #include "filer.h"
 
-bool ege::filer::checkfile(char * file)
+bool ege::Filer::checkfile(char * file)
 {
 	return std::experimental::filesystem::exists(file);
 }
 
-char * ege::filer::readLastWrite(char* file)
+char * ege::Filer::readLastWrite(char* file)
 {
 	auto lasttime = std::experimental::filesystem::last_write_time(file);
 	std::time_t cftime = decltype(lasttime)::clock::to_time_t(lasttime);
 	return std::asctime(std::localtime(&cftime));
 }
 
-int64_t ege::filer::readSize(char* file)
+int64_t ege::Filer::readSize(char* file)
 {
 	return std::experimental::filesystem::file_size(file);
 }
 
-const char * ege::filer::strcomptype(ege::COMPRESSION_METHOD id)
+const char * ege::Filer::strcomptype(ege::COMPRESSION_METHOD id)
 {
 	switch (id)
 	{
@@ -28,7 +28,7 @@ const char * ege::filer::strcomptype(ege::COMPRESSION_METHOD id)
 	}
 }
 
-ERR_STATUS ege::filer::copy(char * pathSrc, char * pathDest)
+ERR_STATUS ege::Filer::copy(char * pathSrc, char * pathDest)
 {
 	FILE *src = fopen(this->path, "rb");
 	FILE *dest = fopen(pathDest, "wb");
@@ -46,56 +46,90 @@ ERR_STATUS ege::filer::copy(char * pathSrc, char * pathDest)
 	return NO_ERROR;
 }
 
-void ege::filer::prepareHeader(char* pathSrc)
+void ege::Filer::prepareHeader()
 {
-	std::experimental::filesystem::path path = pathSrc;
+	std::experimental::filesystem::path path = this->path;
 
-	this->context.size = this->readSize(pathSrc);
+	this->context.size = this->readSize(this->path);
 	strcpy(this->context.filename, path.stem().string().c_str());
 	strcpy(this->context.extension, path.extension().string().c_str());
-	strcpy(this->context.lastwrite, this->readLastWrite(pathSrc));
+	strcpy(this->context.lastwrite, this->readLastWrite(this->path));
 	this->context.compression = this->getCompressionType;
-#ifdef CRYPTOGRAPH_EGE
+#ifdef CRYPTOGRAPH_EGE	
 	this->context.crypto = this->getEncryptionMethod();
+	this->context.crypto == ege::CRYPTO_METHOD::NO_ENCRYPT ? this->context.crypto_check = 0 : this->context.crypto_check = 1;
 	this->context.hashmethod = this->getHashMethod();
+#else
+	this->context.crypto_check = 0;
 #endif // CRYPTOGRAPH_EGE
 
 }
 
-ERR_STATUS ege::filer::readHeader(char * pathSrc) // <------------------------------------------
+ERR_STATUS ege::Filer::readHeader(char * pathSrc)
 {
 	FILE *fptr = fopen(pathSrc, "rb");
-	fread(&this->context, sizeof(this->context), 1, fptr);
+	char buffer[5];
+	size_t size = 0;
 
-	if (strcmp(this->context.codeword, "EGE!"))
+	fread(buffer, sizeof(char) * 5, 1, fptr);
+	if (strcmp(buffer, "EGE!"))
 		return FILE_NOT_SUPPORTED;
+	fread(&size, sizeof(size_t), 1, fptr); // Read size
+
+	if (size == sizeof(ege::fileProperties)) { // HOST + CLIENT EQUAL
+		fread(&this->context, sizeof(ege::fileProperties), 1, fptr);
+		
+		fread(buffer, sizeof(char) * 5, 1, fptr);
+		if (strcmp(buffer, "END!"))
+			return FILE_NOT_SUPPORTED;
+	}
 #ifdef CRYPTOGRAPH_EGE
-	if (!strcmp(this->context.extword, "END!")) {
-		strcpy(this->context.extword, "EXT!");
+	else if (size < sizeof(ege::fileProperties)) { // HOST NORMAL + CLIENT CRYPT
+		fread(&this->context, size, 1, fptr);
+		
+		fread(buffer, sizeof(char) * 5, 1, fptr);
+		if (strcmp(buffer, "END!"))
+			return FILE_NOT_SUPPORTED;
+		
 		this->context.crypto = ege::CRYPTO_METHOD::NO_ENCRYPT;
 		this->context.hashmethod = ippHashAlg_Unknown;
-		strcpy(this->context.endword, "END!");
-		return NO_ERROR;
 	}
-#else
-	if (!strcmp(this->context.endword, "EXT!"))
-		return CRYPT_NOT_SUPPORTED;
-	if (!strcmp(this->context.endword, "END!"))
-		return NO_ERROR;
 #endif // CRYPTOGRAPH_EGE
-
-	return FILE_NOT_SUPPORTED;
+	else if (size > sizeof(ege::fileProperties)) { // HOST CRYPT + CLIENT NORMAL
+		fread(&this->context, sizeof(ege::fileProperties), 1, fptr);
+		
+		fread(buffer, sizeof(char) * 5, 1, fptr);
+		if (strcmp(buffer, "END!"))
+			return FILE_NOT_SUPPORTED;
+		
+		if (this->context.crypto_check)
+			return CRYPT_NOT_SUPPORTED;
+	}
 }
 
-void ege::filer::writeHeader(char * pathDest) // <------------------------------------------
+void ege::Filer::writeHeader(char * pathDest)
 {
 	FILE *fptr = fopen(pathDest,"wb");
+	size_t size = sizeof(ege::fileProperties);
+
+	fwrite("EGE!", sizeof(char) * 5, 1, fptr);	
+	fwrite(&size, sizeof(size_t), 1, fptr);
 	fwrite(&this->context, sizeof(this->context), 1, fptr);
+	fwrite("END!", sizeof(char) * 5, 1, fptr);
 	fclose(fptr);
 }
 
+void ege::Filer::configFromHeader()
+{
+	this->setCompressionType(this->context.compression);
 #ifdef CRYPTOGRAPH_EGE
-const char * ege::filer::strhashtype(IppHashAlgId id)
+	this->setEncryptionMethod(this->context.crypto);
+	this->setHashMethod(this->context.hashmethod);
+#endif // CRYPTOGRAPH_EGE
+}
+
+#ifdef CRYPTOGRAPH_EGE
+const char * ege::Filer::strhashtype(IppHashAlgId id)
 {
 	switch (id)
 	{
@@ -124,7 +158,7 @@ const char * ege::filer::strhashtype(IppHashAlgId id)
 	}
 }
 
-const char * ege::filer::strcrypttype(ege::CRYPTO_METHOD id)
+const char * ege::Filer::strcrypttype(ege::CRYPTO_METHOD id)
 {
 	// Always return 5 character ('CODE' + '\0')
 	switch (id)
@@ -145,13 +179,13 @@ const char * ege::filer::strcrypttype(ege::CRYPTO_METHOD id)
 }
 #endif
 
-ege::filer::filer(char * pathSrc)
+ege::Filer::Filer(char * pathSrc)
 {
 	this->path = (char*)malloc(sizeof(char)*FILENAME_MAX);
 	pathSrc ? this->setPath(pathSrc) : void();
 }
 
-ERR_STATUS ege::filer::setPath(char * pathSrc)
+ERR_STATUS ege::Filer::setPath(char * pathSrc)
 {
 	if (strlen(pathSrc) < FILENAME_MAX && pathSrc) {
 		if (this->checkfile(this->path)) {
@@ -167,7 +201,7 @@ ERR_STATUS ege::filer::setPath(char * pathSrc)
 		return FILE_NOT_SET;
 }
 
-ERR_STATUS ege::filer::moveFile(char * pathDest, bool overwrite)
+ERR_STATUS ege::Filer::moveFile(char * pathDest, bool overwrite)
 {
 	if (this->path)
 		return FILE_NOT_SET;
@@ -176,7 +210,7 @@ ERR_STATUS ege::filer::moveFile(char * pathDest, bool overwrite)
 	this->path[0] == pathDest[0] ? rename(this->path, pathDest) : this->copy(this->path, pathDest);
 }
 
-ERR_STATUS ege::filer::copyFile(char * pathDest, bool overwrite)
+ERR_STATUS ege::Filer::copyFile(char * pathDest, bool overwrite)
 {
 	if (this->path == nullptr)
 		return FILE_NOT_SET;
@@ -186,7 +220,7 @@ ERR_STATUS ege::filer::copyFile(char * pathDest, bool overwrite)
 	return this->copy(this->path, pathDest);
 }
 
-ERR_STATUS ege::filer::pack(char * pathDest, bool overwrite)
+ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 {
 	ERR_STATUS status = NO_ERROR;
 	if (this->path == nullptr)
@@ -195,7 +229,9 @@ ERR_STATUS ege::filer::pack(char * pathDest, bool overwrite)
 		return FILE_ALREADY_EXIST;
 
 	char *tempname = tmpnam(nullptr);
-	this->writeHeader(tempname);
+	
+	this->prepareHeader();
+	
 
 	if (status = this->compress(this->path, tempname)) {
 		free(tempname);
@@ -210,12 +246,13 @@ ERR_STATUS ege::filer::pack(char * pathDest, bool overwrite)
 #else
 	pathDest[0] == tempname[0] ? rename(tempname, pathDest) : status = this->copy(tempname, pathDest);
 #endif // CRYPTOGRAPH_EGE
-
+	
+	// this->writeHeader(tempname); // <-------------------------
 	free(tempname);
 	return status;	
 }
 
-ERR_STATUS ege::filer::unpack(char * pathDest, bool overwrite)
+ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 {
 	ERR_STATUS status = NO_ERROR;
 	if (this->path == nullptr)
@@ -224,7 +261,9 @@ ERR_STATUS ege::filer::unpack(char * pathDest, bool overwrite)
 		return FILE_ALREADY_EXIST;
 
 	char *tempname = tmpnam(nullptr);
-	this->readHeader(tempname);
+
+	this->readHeader(this->path);
+	this->configFromHeader();
 
 	if (status = this->decompress(this->path, tempname)) {
 		free(tempname);
@@ -244,19 +283,19 @@ ERR_STATUS ege::filer::unpack(char * pathDest, bool overwrite)
 	return status;
 }
 
-char* ege::filer::getPath()
+char* ege::Filer::getPath()
 {
 	char path[FILENAME_MAX];
 	strcpy(path, this->path);
 	return path;
 }
 
-void ege::filer::setCompressionType(ege::COMPRESSION_METHOD id)
+void ege::Filer::setCompressionType(ege::COMPRESSION_METHOD id)
 {
 	this->compression_type = id;
 }
 
-ege::COMPRESSION_METHOD ege::filer::getCompressionType(char * type)
+ege::COMPRESSION_METHOD ege::Filer::getCompressionType(char * type)
 {
 	if (type)
 		strcpy(type, this->strcomptype(this->compression_type));
@@ -264,37 +303,37 @@ ege::COMPRESSION_METHOD ege::filer::getCompressionType(char * type)
 }
 
 #ifdef CRYPTOGRAPH_EGE
-void ege::filer::setKey(Ipp8u * key, size_t keylen)
+void ege::Filer::setKey(Ipp8u * key, size_t keylen)
 {
 	this->key = (Ipp8u*)malloc(sizeof(Ipp8u)*keylen);
 	memcpy(this->key, key, sizeof(Ipp8u)*keylen);
 }
 
-Ipp8u * ege::filer::getKey(size_t & keylen)
+Ipp8u * ege::Filer::getKey(size_t & keylen)
 {
 	Ipp8u* buff = (Ipp8u*)malloc(sizeof(Ipp8u)*this->keylen);
 	memcpy(buff, this->key, sizeof(Ipp8u)*this->keylen);
 	return buff;
 }
 
-void ege::filer::setEncryptionMethod(ege::CRYPTO_METHOD id)
+void ege::Filer::setEncryptionMethod(ege::CRYPTO_METHOD id)
 {
 	this->crypto_type = id;
 }
 
-ege::CRYPTO_METHOD ege::filer::getEncryptionMethod(char * type)
+ege::CRYPTO_METHOD ege::Filer::getEncryptionMethod(char * type)
 {
 	if (type)
 		strcpy(type, this->strcrypttype(this->crypto_type));
 	return this->crypto_type;
 }
 
-void ege::filer::setHashMethod(IppHashAlgId id)
+void ege::Filer::setHashMethod(IppHashAlgId id)
 {
 	this->hash_type = id;
 }
 
-IppHashAlgId ege::filer::getHashMethod(char * type)
+IppHashAlgId ege::Filer::getHashMethod(char * type)
 {
 	if (type)
 		strcpy(type, this->strhashtype(this->hash_type));
@@ -302,7 +341,7 @@ IppHashAlgId ege::filer::getHashMethod(char * type)
 }
 #endif
 
-ege::filer::~filer()
+ege::Filer::~Filer()
 {
 	free(this->path);
 #ifdef CRYPTOGRAPH_EGE

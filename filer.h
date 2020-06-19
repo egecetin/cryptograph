@@ -1,7 +1,7 @@
 #pragma once
 
 #include "logger.h"
-//#include "cryptograph.h"
+#include "cryptograph.h"
 
 #include <cstdio>
 #include <cstdint>
@@ -22,14 +22,14 @@ namespace ege {
 	/****************************************** Class ******************************************/
 	/*******************************************************************************************/
 
-	class filer
+	class Filer
 	{
 	public:
 		// Variables
 		double progress = 0; // 0 - 100
 
 		// Functions
-		filer(char* pathSrc = nullptr);
+		Filer(char* pathSrc = nullptr);
 		
 		ERR_STATUS setPath(char* pathSrc);
 		ERR_STATUS moveFile(char* pathDest, bool overwrite = true);
@@ -55,7 +55,7 @@ namespace ege {
 		IppHashAlgId getHashMethod(char* type = nullptr);
 #endif // CRYPTOGRAPH_EGE
 
-		~filer();
+		~Filer();
 
 	private:
 		// Variables
@@ -70,7 +70,7 @@ namespace ege {
 		ERR_STATUS decompress(char* pathSrc, char* pathDest = nullptr);
 		ERR_STATUS copy(char* pathSrc, char* pathDest);
 		ERR_STATUS readHeader(char* pathSrc);
-		void prepareHeader(char* pathSrc);		
+		void prepareHeader();
 		void writeHeader(char* pathDest);
 		void configFromHeader();
 
@@ -88,22 +88,30 @@ namespace ege {
 	
 	};
 
+	class Compressor
+	{
+	public:
+		Compressor();
+		~Compressor();
+
+	private:
+
+	};
+
 	struct fileProperties
 	{
-		char codeword[5] = "EGE!";
 		int64_t size;
 		int64_t c_size;
 		char filename[FILENAME_MAX];
 		char extension[FILENAME_MAX];
 		char lastwrite[25];				// std::asctime has fixed 25 character
-		size_t compression;
+		ege::COMPRESSION_METHOD compression;
+		int crypto_check;
 #ifdef CRYPTOGRAPH_EGE
-		char extword[5] = "EXT!";
 		ege::CRYPTO_METHOD crypto;
 		IppHashAlgId hashmethod;
 		Ipp8u hashcode[MAX_HASH_LEN];
 #endif // CRYPTOGRAPH_EGE
-		char endword[5] = "END!";
 	};
 
 	/*******************************************************************************************/

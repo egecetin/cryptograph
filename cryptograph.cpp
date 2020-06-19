@@ -526,8 +526,6 @@ ege::Hash_Coder::Hash_Coder(IppHashAlgId id)
 	status = ippsHashInit(this->context, id);
 	if (status != NO_ERROR)
 		throw runtime_error(ege::sterror(status, IPP_ID));
-
-
 }
 
 inline ERR_STATUS ege::Hash_Coder::update(Ipp8u * msg, size_t lenmsg)
