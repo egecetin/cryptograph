@@ -131,7 +131,7 @@ namespace ege {
 	public:
 		Hash_Coder(IppHashAlgId id);
 		inline ERR_STATUS update(Ipp8u* msg, size_t lenmsg);
-		inline ERR_STATUS getHash(Ipp8u *&code);
+		inline ERR_STATUS getHash(Ipp8u *code);
 		~Hash_Coder();
 
 	private:

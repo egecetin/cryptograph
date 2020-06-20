@@ -42,7 +42,8 @@ typedef int ERR_STATUS;
 #define CRYPT_NOT_SUPPORTED		40
 #define CRYPT_BITSIZE_MISMATCH	41
 #define CRYPT_UNKNOWN_METHOD	42
-#define HASH_CHECK_FAIL			43
+#define CRYPT_KEY_NOT_SET		43
+#define HASH_CHECK_FAIL			44
 
 namespace ege {
 
