@@ -12,7 +12,10 @@
 constexpr auto N_TRIAL = 10;
 constexpr auto MAX_TRIAL = 25;
 
-#define MAX_HASH_LEN 64
+#define MAX_HASH_LEN	64
+
+#define PUBLIC_KEY		1
+#define PRIVATE_KEY		2
 
 namespace ege {
 	
@@ -85,17 +88,16 @@ namespace ege {
 
 
 	/******************************************* AES *******************************************/
-	class AES_Crypt
+	class AES_Crypt // Only 256 bit
 	{
 	public:
 		// Variables
 
 		// Functions
 		AES_Crypt(Ipp8u* pkey = nullptr);
-		ERR_STATUS setKey(Ipp8u* key);
+		inline ERR_STATUS setKey(Ipp8u* key);
 		ERR_STATUS encryptMessage(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphertext, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
 		ERR_STATUS decryptMessage(Ipp8u *&ciphertext, Ipp8u *&msg, int &lenmsg, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
-		ERR_STATUS getKey(Ipp8u* key);
 		~AES_Crypt();
 
 	private:
@@ -109,7 +111,7 @@ namespace ege {
 
 
 	/******************************************* SMS4 *******************************************/
-	class SMS4_Crypt
+	class SMS4_Crypt // Only 256 bit
 	{
 	public:
 		// Variables
@@ -119,7 +121,6 @@ namespace ege {
 		ERR_STATUS setKey(Ipp8u* key);
 		ERR_STATUS encryptMessage(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphertext, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
 		ERR_STATUS decryptMessage(Ipp8u *&ciphertext, Ipp8u *&msg, int &lenmsg, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
-		ERR_STATUS getKey(Ipp8u* key);
 		~SMS4_Crypt();
 
 	private:

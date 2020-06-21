@@ -384,10 +384,15 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 		if (status = this->compress(src, dest)) {
 			return status;
 		}
+		if (this->context.crypto_check == 1) {
+			src = dest;
+			dest = tempname2;
+		}
 	}
+
+#ifdef CRYPTOGRAPH_EGE
 	if (this->context.crypto != NO_ENCRYPT) {
-		src = dest;
-		dest = tempname2;
+
 		if (this->key == nullptr)
 			return CRYPT_KEY_NOT_SET;
 		while (std::experimental::filesystem::exists(dest)) // For ensure thread safety
@@ -396,6 +401,8 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 			return status;
 		}
 	}
+#endif // CRYPTOGRAPH_EGE
+
 	status = this->copy(dest, pathDest, 1);
 	this->writeHeader(pathDest);
 
@@ -423,6 +430,7 @@ ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 	char *src = tempname;
 	char *dest = tempname2;
 
+#ifdef CRYPTOGRAPH_EGE
 	if (this->context.crypto != NO_ENCRYPT) {
 		if (this->key == nullptr)
 			return CRYPT_KEY_NOT_SET;
@@ -431,10 +439,14 @@ ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 		if (status = this->decrypt(src, dest)) {
 			return status;
 		}
+		if (this->context.compression != NO_COMPRESS) {
+			src = tempname2;
+			dest = tempname;
+		}
 	}
+#endif // CRYPTOGRAPH_EGE
+
 	if (this->context.compression != NO_COMPRESS) {
-		src = tempname2;
-		dest = tempname;
 		while (std::experimental::filesystem::exists(dest)) // For ensure thread safety
 			tmpnam(dest);
 		if (status = this->decompress(src, dest)) {

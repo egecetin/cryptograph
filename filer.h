@@ -1,7 +1,7 @@
 #pragma once
 
 #include "logger.h"
-#include "cryptograph.h"
+//#include "cryptograph.h"
 
 #include <cstdio>
 #include <cstdint>
@@ -32,10 +32,10 @@ namespace ege {
 		Filer(char* pathSrc = nullptr);
 		
 		ERR_STATUS setPath(char* pathSrc);
-		ERR_STATUS moveFile(char* pathDest, bool overwrite = true);
-		ERR_STATUS copyFile(char* pathDest, bool overwrite = true);
-		ERR_STATUS pack(char* pathDest = nullptr, bool overwrite = true);
-		ERR_STATUS unpack(char* pathDest = nullptr, bool overwrite = true);
+		ERR_STATUS moveFile(char* pathDest, bool overwrite = false);
+		ERR_STATUS copyFile(char* pathDest, bool overwrite = false);
+		ERR_STATUS pack(char* pathDest = nullptr, bool overwrite = false);
+		ERR_STATUS unpack(char* pathDest = nullptr, bool overwrite = false);
 		
 		char* getPath();
 		int64_t readSize(char* file);
@@ -68,7 +68,7 @@ namespace ege {
 		const char* strcomptype(ege::COMPRESSION_METHOD id);		
 		ERR_STATUS compress(char* pathSrc, char* pathDest = nullptr);
 		ERR_STATUS decompress(char* pathSrc, char* pathDest = nullptr);
-		ERR_STATUS copy(char* pathSrc, char* pathDest, int prepend);
+		ERR_STATUS copy(char* pathSrc, char* pathDest, int prepend = 0);
 		ERR_STATUS readHeader(char* pathSrc);
 		void prepareHeader();
 		ERR_STATUS writeHeader(char* pathDest);

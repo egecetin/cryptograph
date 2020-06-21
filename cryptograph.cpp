@@ -199,6 +199,23 @@ ege::RSA_Crypt::RSA_Crypt(const int bitsize, Ipp8u *private_key, size_t privateS
 	}
 }
 
+ERR_STATUS ege::RSA_Crypt::setKey(int key_type, Ipp8u * key, size_t keySize)
+{
+	switch (key_type)
+	{
+	case PUBLIC_KEY:
+	{
+		
+	}
+	case PRIVATE_KEY:
+	{
+
+	}
+	default:
+		return CRYPT_UNKNOWN_KEY_TYPE;
+	}
+}
+
 void ege::RSA_Crypt::printKeys()
 {
 	std::cout << "-----------------------------------------------------------------------------------------" << std::endl;
@@ -469,10 +486,15 @@ ege::AES_Crypt::AES_Crypt(Ipp8u* pkey)
 	if (pkey == nullptr) {
 		pkey = rand8(256 / 8);
 	}
-
-	status = ippsAESInit(pkey, 256 / 8, key, ctxSize);
+	
+	status = ippsAESInit(pkey, 256 / 8, this->key, ctxSize);
 	if (status != NO_ERROR)
 		throw runtime_error(ege::sterror(status, IPP_ID));
+}
+
+inline ERR_STATUS ege::AES_Crypt::setKey(Ipp8u * pkey)
+{
+	return ippsAESSetKey(pkey, 256 / 8, this->key);
 }
 
 ERR_STATUS ege::AES_Crypt::encryptMessage(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphertext, Ipp8u *ctr, int ctrBitLen)
@@ -562,6 +584,11 @@ ege::SMS4_Crypt::SMS4_Crypt(Ipp8u * pkey)
 	status = ippsSMS4Init(pkey, 256 / 8, key, ctxSize);
 	if (status != NO_ERROR)
 		throw runtime_error(ege::sterror(status, IPP_ID));
+}
+
+inline ERR_STATUS ege::SMS4_Crypt::setKey(Ipp8u * key)
+{
+	return ippsSMS4SetKey(key, 256 / 8, this->key);
 }
 
 ERR_STATUS ege::SMS4_Crypt::encryptMessage(Ipp8u *& msg, int lenmsg, Ipp8u *& ciphertext, Ipp8u * ctr, int ctrBitLen)
