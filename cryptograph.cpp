@@ -543,3 +543,61 @@ ege::Hash_Coder::~Hash_Coder()
 	delete[](Ipp8u*)this->context;
 	this->context = nullptr;
 }
+
+ege::SMS4_Crypt::SMS4_Crypt(Ipp8u * pkey)
+{
+	ERR_STATUS status = NO_ERROR;
+	int ctxSize = 0;
+
+	status = ippsSMS4GetSize(&ctxSize);
+	if (status != NO_ERROR)
+		throw runtime_error(ege::sterror(status, IPP_ID));
+	this->key = (IppsSMS4Spec*)(new Ipp8u[ctxSize]);
+	this->ctr = new Ipp8u[16];
+
+	if (pkey == nullptr) {
+		pkey = rand8(256 / 8);
+	}
+
+	status = ippsSMS4Init(pkey, 256 / 8, key, ctxSize);
+	if (status != NO_ERROR)
+		throw runtime_error(ege::sterror(status, IPP_ID));
+}
+
+ERR_STATUS ege::SMS4_Crypt::encryptMessage(Ipp8u *& msg, int lenmsg, Ipp8u *& ciphertext, Ipp8u * ctr, int ctrBitLen)
+{
+	if (ctr == nullptr)
+		return ippsSMS4EncryptCTR(msg, ciphertext, lenmsg, this->key, this->ctr, 16 * sizeof(Ipp8u));
+	else
+		return ippsSMS4EncryptCTR(msg, ciphertext, lenmsg, this->key, ctr, ctrBitLen);
+}
+
+ERR_STATUS ege::SMS4_Crypt::decryptMessage(Ipp8u *& ciphertext, Ipp8u *& msg, int & lenmsg, Ipp8u * ctr, int ctrBitLen)
+{
+	if (ctr == nullptr)
+		return ippsSMS4DecryptCTR(ciphertext, msg, lenmsg, this->key, this->ctr, 16 * sizeof(Ipp8u));
+	else
+		return ippsSMS4DecryptCTR(ciphertext, msg, lenmsg, this->key, ctr, ctrBitLen);
+}
+
+ege::SMS4_Crypt::~SMS4_Crypt()
+{
+	if (this->key != nullptr) {
+		int ctxSize;
+		ippsSMS4GetSize(&ctxSize);
+		ippsSMS4Init(nullptr, 256 / 8, key, ctxSize);
+		delete[](Ipp8u*)this->key;
+		this->key = nullptr;
+	}
+
+	delete[] this->ctr;
+}
+
+inline Ipp8u * ege::SMS4_Crypt::rand8(int size)
+{
+	Ipp8u* pX = new Ipp8u[size];
+	std::srand(std::time(nullptr)); // Seed with current time
+	for (int n = 0; n < size; ++n)
+		pX[n] = rand();
+	return pX;
+}

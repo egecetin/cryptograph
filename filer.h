@@ -68,7 +68,7 @@ namespace ege {
 		const char* strcomptype(ege::COMPRESSION_METHOD id);		
 		ERR_STATUS compress(char* pathSrc, char* pathDest = nullptr);
 		ERR_STATUS decompress(char* pathSrc, char* pathDest = nullptr);
-		ERR_STATUS copy(char* pathSrc, char* pathDest, bool prepend);
+		ERR_STATUS copy(char* pathSrc, char* pathDest, int prepend);
 		ERR_STATUS readHeader(char* pathSrc);
 		void prepareHeader();
 		ERR_STATUS writeHeader(char* pathDest);

@@ -28,17 +28,22 @@ const char * ege::Filer::strcomptype(ege::COMPRESSION_METHOD id)
 	}
 }
 
-ERR_STATUS ege::Filer::copy(char * pathSrc, char * pathDest, bool prepend)
+ERR_STATUS ege::Filer::copy(char * pathSrc, char * pathDest, int prepend)
 {
+	size_t size;
+	char buf[BUFSIZ];	
+
 	FILE *src = fopen(this->path, "rb");
 	FILE *dest = fopen(pathDest, "wb");
 	if (!(src && dest))
 		return FILE_INPUT_OUTPUT_ERR;
-	if (prepend)
+	if (prepend == 1) // Allocate header
 		fwrite('\0', 1, sizeof(ege::fileProperties) + 8, dest);
-
-	char buf[BUFSIZ];
-	size_t size;
+	if (prepend == -1) { // Deallocate header
+		fread(buf, 1, 4, src);
+		fread(&size, sizeof(size_t), 1, src); // Read size
+		fseek(src, size + 4, SEEK_CUR);
+	}
 
 	while (size = fread(buf, 1, BUFSIZ, src)) {
 		fwrite(buf, size, 1, dest);
@@ -115,7 +120,7 @@ ERR_STATUS ege::Filer::readHeader(char * pathSrc)
 
 ERR_STATUS ege::Filer::writeHeader(char * pathDest)
 {
-	FILE *fptr = fopen(pathDest,"wb+");
+	FILE *fptr = fopen(pathDest,"rb+");
 	if (!fptr)
 		return FILE_INPUT_OUTPUT_ERR;
 
@@ -374,15 +379,19 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 	char *dest = tempname;	
 
 	if (this->context.compression != NO_COMPRESS) {
+		while (std::experimental::filesystem::exists(dest)) // For ensure thread safety
+			tmpnam(dest);
 		if (status = this->compress(src, dest)) {
 			return status;
 		}
-		src = dest;
-		dest = tempname2;
 	}
 	if (this->context.crypto != NO_ENCRYPT) {
+		src = dest;
+		dest = tempname2;
 		if (this->key == nullptr)
 			return CRYPT_KEY_NOT_SET;
+		while (std::experimental::filesystem::exists(dest)) // For ensure thread safety
+			tmpnam(dest);
 		if (status = this->encrypt(src, dest)) {
 			return status;
 		}
@@ -410,22 +419,27 @@ ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 		return status;
 	this->configFromHeader();
 
-	char *src = this->path;
-	char *dest = tempname;
+	this->copy(this->path, tempname, -1);
+	char *src = tempname;
+	char *dest = tempname2;
 
 	if (this->context.crypto != NO_ENCRYPT) {
 		if (this->key == nullptr)
 			return CRYPT_KEY_NOT_SET;
+		while (std::experimental::filesystem::exists(dest)) // For ensure thread safety
+			tmpnam(dest);
 		if (status = this->decrypt(src, dest)) {
 			return status;
 		}
 	}
 	if (this->context.compression != NO_COMPRESS) {
+		src = tempname2;
+		dest = tempname;
+		while (std::experimental::filesystem::exists(dest)) // For ensure thread safety
+			tmpnam(dest);
 		if (status = this->decompress(src, dest)) {
 			return status;
 		}
-		src = dest;
-		dest = tempname2;
 	}
 	status = this->copy(dest, pathDest, 0);
 

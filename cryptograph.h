@@ -91,7 +91,7 @@ namespace ege {
 		// Variables
 
 		// Functions
-		AES_Crypt(Ipp8u* key = nullptr);
+		AES_Crypt(Ipp8u* pkey = nullptr);
 		ERR_STATUS setKey(Ipp8u* key);
 		ERR_STATUS encryptMessage(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphertext, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
 		ERR_STATUS decryptMessage(Ipp8u *&ciphertext, Ipp8u *&msg, int &lenmsg, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
@@ -115,7 +115,11 @@ namespace ege {
 		// Variables
 
 		// Functions
-		SMS4_Crypt(Ipp8u* key = nullptr);
+		SMS4_Crypt(Ipp8u* pkey = nullptr);
+		ERR_STATUS setKey(Ipp8u* key);
+		ERR_STATUS encryptMessage(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphertext, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
+		ERR_STATUS decryptMessage(Ipp8u *&ciphertext, Ipp8u *&msg, int &lenmsg, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
+		ERR_STATUS getKey(Ipp8u* key);
 		~SMS4_Crypt();
 
 	private:
@@ -124,6 +128,7 @@ namespace ege {
 		Ipp8u* ctr = nullptr;
 
 		// Functions
+		inline Ipp8u* rand8(int size);
 	};
 
 	class Hash_Coder
