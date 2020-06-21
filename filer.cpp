@@ -234,9 +234,9 @@ ERR_STATUS ege::Filer::encrypt(char * pathSrc, char * pathDest)
 		}
 	}
 	case ege::CRYPTO_METHOD::RSA:
-		// Allocated
+		// Reserved
 	case ege::CRYPTO_METHOD::ECCP:
-		// Allocated
+		// Reserved
 	default:
 		status = CRYPT_UNKNOWN_METHOD;
 	}
@@ -296,9 +296,9 @@ ERR_STATUS ege::Filer::decrypt(char * pathSrc, char * pathDest)
 		}
 	}
 	case ege::CRYPTO_METHOD::RSA:
-		// Allocated
+		// Reserved
 	case ege::CRYPTO_METHOD::ECCP:
-		// Allocated
+		// Reserved
 	default:
 		status = CRYPT_UNKNOWN_METHOD;
 	}
@@ -372,7 +372,8 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 		return FILE_NOT_SET;
 	if (!overwrite && this->checkfile(pathDest))
 		return FILE_ALREADY_EXIST;
-
+	
+	this->progress = 0;
 	this->prepareHeader();
 
 	char *src = this->path;
@@ -389,6 +390,7 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 			dest = tempname2;
 		}
 	}
+	this->progress = 33;
 
 #ifdef CRYPTOGRAPH_EGE
 	if (this->context.crypto != NO_ENCRYPT) {
@@ -402,9 +404,11 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 		}
 	}
 #endif // CRYPTOGRAPH_EGE
+	this->progress = 66;
 
 	status = this->copy(dest, pathDest, 1);
 	this->writeHeader(pathDest);
+	this->progress = 100;
 
 	std::experimental::filesystem::exists(tempname) ? std::experimental::filesystem::remove(tempname) : void();
 	std::experimental::filesystem::exists(tempname2) ? std::experimental::filesystem::remove(tempname2) : void();
@@ -422,6 +426,7 @@ ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 	if (!overwrite && this->checkfile(pathDest))
 		return FILE_ALREADY_EXIST;
 
+	this->progress = 0;
 	if (status = this->readHeader(this->path) != NO_ERROR)
 		return status;
 	this->configFromHeader();
@@ -429,6 +434,7 @@ ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 	this->copy(this->path, tempname, -1);
 	char *src = tempname;
 	char *dest = tempname2;
+	this->progress = 25;
 
 #ifdef CRYPTOGRAPH_EGE
 	if (this->context.crypto != NO_ENCRYPT) {
@@ -445,6 +451,7 @@ ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 		}
 	}
 #endif // CRYPTOGRAPH_EGE
+	this->progress = 50;
 
 	if (this->context.compression != NO_COMPRESS) {
 		while (std::experimental::filesystem::exists(dest)) // For ensure thread safety
@@ -453,7 +460,10 @@ ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 			return status;
 		}
 	}
+	this->progress = 75;
+
 	status = this->copy(dest, pathDest, 0);
+	this->progress = 100;
 
 	std::experimental::filesystem::exists(tempname) ? std::experimental::filesystem::remove(tempname) : void();
 	std::experimental::filesystem::exists(tempname2) ? std::experimental::filesystem::remove(tempname2) : void();

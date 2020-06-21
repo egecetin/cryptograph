@@ -199,21 +199,42 @@ ege::RSA_Crypt::RSA_Crypt(const int bitsize, Ipp8u *private_key, size_t privateS
 	}
 }
 
-ERR_STATUS ege::RSA_Crypt::setKey(int key_type, Ipp8u * key, size_t keySize)
+ERR_STATUS ege::RSA_Crypt::setKey(int key_type, Ipp8u * key, int keySize)
 {
+	ERR_STATUS status = NO_ERROR;
+	std::string buffer;
+	size_t size;
+
+	if (!key)
+		return ippStsNullPtrErr;
+
 	switch (key_type)
 	{
-	case PUBLIC_KEY:
+	case IppRSApublic:
 	{
-		
-	}
-	case PRIVATE_KEY:
-	{
+		BigNumber modulus, publicExp;
 
+		modulus.Set((Ipp32u*)key, this->bitsize / 32, IppsBigNumPOS);
+		publicExp.Set((Ipp32u*)&key[this->bitsize / 32], keySize - this->bitsize / 32, IppsBigNumPOS);
+
+		if (status = ippsRSA_SetPublicKey(modulus, publicExp, this->publicKey))
+			return status;
+	}
+	case IppRSAprivate:
+	{
+		BigNumber p, q, dP, dQ, invQ;
+
+		p.Set((Ipp32u*)key, (keySize + 1) / 2, IppsBigNumPOS);
+		q.Set((Ipp32u*)&key[(keySize + 1) / 2], (keySize - 1) / 2, IppsBigNumPOS);
+
+		if (status = ippsRSA_SetPrivateKeyType2(p, q, dP, dQ, invQ, this->privateKey))
+			return status;
 	}
 	default:
 		return CRYPT_UNKNOWN_KEY_TYPE;
 	}
+
+	return NO_ERROR;
 }
 
 void ege::RSA_Crypt::printKeys()
@@ -392,6 +413,66 @@ ERR_STATUS ege::RSA_Crypt::encryptMessage(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphe
 ERR_STATUS ege::RSA_Crypt::decryptMessage(Ipp8u *&ciphertext, Ipp8u *&msg, int &lenmsg, Ipp8u *label, int lenlabel)
 {
 	return ippsRSADecrypt_OAEP(ciphertext, label, lenlabel, msg, &lenmsg, this->privateKey, ippHashAlg_SHA512_256, this->buffer);
+}
+
+ERR_STATUS ege::RSA_Crypt::getKey(int key_type, Ipp8u * key, int keysize)
+{
+	ERR_STATUS status = NO_ERROR;
+	std::string buffer;
+	size_t size;
+
+	if (!key)
+		return ippStsNullPtrErr;
+	
+	switch (key_type)
+	{
+	case IppRSApublic:
+	{
+		BigNumber modulus, publicExp;
+
+		if (status = ippsRSA_GetPublicKey(modulus, publicExp, this->publicKey))
+			return status;
+		
+		modulus.num2hex(buffer); 
+		keysize -= buffer.size();
+		if (keysize < 0)
+			return ippStsLengthErr;
+		memcpy(key, buffer.c_str(), buffer.size());
+
+		size = buffer.size();
+
+		publicExp.num2hex(buffer);
+		keysize -= buffer.size();
+		if (keysize < 0)
+			return ippStsLengthErr;
+		memcpy(&key[size], buffer.c_str(), buffer.size());
+	}
+	case IppRSAprivate:
+	{
+		BigNumber p, q;
+
+		if (status = ippsRSA_GetPrivateKeyType2(p, q, nullptr, nullptr, nullptr, this->privateKey))
+			return status;
+
+		p.num2hex(buffer);
+		keysize -= buffer.size();
+		if (keysize < 0)
+			return ippStsLengthErr;
+		memcpy(key, buffer.c_str(), buffer.size());
+
+		size = buffer.size();
+
+		q.num2hex(buffer);
+		keysize -= buffer.size();
+		if (keysize < 0)
+			return ippStsLengthErr;
+		memcpy(&key[size], buffer.c_str(), buffer.size());
+	}
+	default:
+		return CRYPT_UNKNOWN_KEY_TYPE;
+	}
+
+	return NO_ERROR;
 }
 
 ege::RSA_Crypt::~RSA_Crypt()

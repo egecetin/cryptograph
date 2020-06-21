@@ -14,9 +14,6 @@ constexpr auto MAX_TRIAL = 25;
 
 #define MAX_HASH_LEN	64
 
-#define PUBLIC_KEY		1
-#define PRIVATE_KEY		2
-
 namespace ege {
 	
 	/*******************************************************************************************/
@@ -46,10 +43,10 @@ namespace ege {
 
 		// Functions
 		RSA_Crypt(const int bitsize, Ipp8u *private_key = nullptr, size_t privateSize = 0, Ipp8u *public_key = nullptr, size_t publicSize = 0);
-		ERR_STATUS setKey(int key_type, Ipp8u *key, size_t keySize);
+		ERR_STATUS setKey(int key_type, Ipp8u *key, int keySize);
 		ERR_STATUS encryptMessage(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphertext, Ipp8u *label = nullptr, int lenlabel = 0);
 		ERR_STATUS decryptMessage(Ipp8u *&ciphertext, Ipp8u *&msg, int &lenmsg, Ipp8u *label = nullptr, int lenlabel = 0);
-		ERR_STATUS getKey(int key_type, Ipp8u *key);
+		ERR_STATUS getKey(int key_type, Ipp8u *key, int keysize);
 
 #ifdef _DEBUG
 		void printKeys();
