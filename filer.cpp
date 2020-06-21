@@ -535,3 +535,17 @@ ege::Filer::~Filer()
 	free(this->key);
 #endif
 }
+
+ege::LZSS_Comp::LZSS_Comp()
+{
+	ERR_STATUS status = NO_ERROR;
+	int ctxSize = 0;
+
+	ippsLZSSGetSize_8u(&ctxSize);
+	this->context = (IppLZSSState_8u*)new Ipp8u[ctxSize];
+}
+
+ege::LZSS_Comp::~LZSS_Comp()
+{
+	delete[](Ipp8u*)this->context;
+}

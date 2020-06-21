@@ -1,7 +1,7 @@
 #pragma once
 
 #include "logger.h"
-//#include "cryptograph.h"
+#include "cryptograph.h"
 
 #include <cstdio>
 #include <cstdint>
@@ -15,9 +15,17 @@ namespace ege {
 	
 	enum COMPRESSION_METHOD
 	{
-		NO_COMPRESS
+		NO_COMPRESS,
+		LZSS,			// Lempel-Ziv-Storer-Szymansk
+		ZLIB_FAST,
+		ZLIB_AVERAGE,
+		ZLIB_SLOW,
+		LZO_FAST,		// Lempel-Ziv-Oberhumer (IppLZO1X1ST)
+		LZO_SLOW,		// Lempel-Ziv-Oberhumer (IppLZO1XST)
+		LZ4,
+		LZ4_HC
 	};
-
+	
 	/*******************************************************************************************/
 	/****************************************** Class ******************************************/
 	/*******************************************************************************************/
@@ -26,7 +34,7 @@ namespace ege {
 	{
 	public:
 		// Variables
-		double progress = 0; // 0 - 100
+		double progress = 0; // Between 0 - 100
 
 		// Functions
 		Filer(char* pathSrc = nullptr);
@@ -88,14 +96,16 @@ namespace ege {
 	
 	};
 
-	class Compressor
+	class LZSS_Comp
 	{
 	public:
-		Compressor();
-		~Compressor();
+		LZSS_Comp();
+		ERR_STATUS encode();
+		ERR_STATUS decode();
+		~LZSS_Comp();
 
 	private:
-
+		IppLZSSState_8u *context = nullptr;
 	};
 
 	struct fileProperties

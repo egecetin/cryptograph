@@ -133,7 +133,7 @@ namespace ege {
 			return "Failed creating the context (CUDA).";
 		case OPENCV_VIDEO_ERROR:
 			return "Can't open video file.";
-		case IPPCP_BITSIZE_MISMATCH:
+		case CRYPT_BITSIZE_MISMATCH:
 			return "Bitsize mismatch at context.";
 		default:
 			return "Unknown error code";
