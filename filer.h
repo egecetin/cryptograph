@@ -137,6 +137,7 @@ namespace ege {
 
 	private:
 		Ipp8u* hashTable = nullptr;
+		Ipp8u* dict = nullptr;
 	};
 
 	struct fileProperties
