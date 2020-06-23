@@ -8,6 +8,10 @@
 #include <chrono>
 #include <filesystem>
 
+#define BUFFER_SIZE	 65536	//  64 kB
+#define COMP_BUFSIZ	131072	// 128 kB
+
+
 namespace ege {
 	/*******************************************************************************************/
 	/*************************************** Definitions ***************************************/
@@ -23,13 +27,14 @@ namespace ege {
 		LZO_FAST,		// Lempel-Ziv-Oberhumer (IppLZO1X1ST)
 		LZO_SLOW,		// Lempel-Ziv-Oberhumer (IppLZO1XST)
 		LZ4,
-		LZ4_HC
+		LZ4_HC			// High-compression mode
 	};
 	
 	/*******************************************************************************************/
 	/****************************************** Class ******************************************/
 	/*******************************************************************************************/
 
+	/*************************************** FileHandler ***************************************/
 	class Filer
 	{
 	public:
@@ -74,8 +79,8 @@ namespace ege {
 		// Functions
 		bool checkfile(char* file);
 		const char* strcomptype(ege::COMPRESSION_METHOD id);		
-		ERR_STATUS compress(char* pathSrc, char* pathDest = nullptr);
-		ERR_STATUS decompress(char* pathSrc, char* pathDest = nullptr);
+		ERR_STATUS compress(char* pathSrc, char* pathDest);
+		ERR_STATUS decompress(char* pathSrc, char* pathDest);
 		ERR_STATUS copy(char* pathSrc, char* pathDest, int prepend = 0);
 		ERR_STATUS readHeader(char* pathSrc);
 		void prepareHeader();
@@ -90,22 +95,48 @@ namespace ege {
 
 		const char* strhashtype(IppHashAlgId id);
 		const char* strcrypttype(ege::CRYPTO_METHOD id);
-		ERR_STATUS encrypt(char* pathSrc, char* pathDest = nullptr);
-		ERR_STATUS decrypt(char* pathSrc, char* pathDest = nullptr);
+		ERR_STATUS encrypt(char* pathSrc, char* pathDest);
+		ERR_STATUS decrypt(char* pathSrc, char* pathDest);
 #endif // CRYPTOGRAPH_EGE
 	
 	};
 
+	/******************************************* LZSS ******************************************/
 	class LZSS_Comp
 	{
 	public:
 		LZSS_Comp();
-		ERR_STATUS encode();
-		ERR_STATUS decode();
+		ERR_STATUS encode(char* pathSrc, char* pathDest);
+		ERR_STATUS decode(char* pathSrc, char* pathDest);
 		~LZSS_Comp();
 
 	private:
 		IppLZSSState_8u *context = nullptr;
+	};
+
+	/******************************************* LZO *******************************************/
+	class LZO_Comp 
+	{
+	public:
+		LZO_Comp(ege::COMPRESSION_METHOD id);
+		ERR_STATUS encode(char* pathSrc, char* pathDest);
+		ERR_STATUS decode(char* pathSrc, char* pathDest);
+		~LZO_Comp();
+
+	private:
+		IppLZOState_8u *context = nullptr;
+
+	};
+
+	/******************************************* LZ4 *******************************************/
+	class LZ4_Comp
+	{
+	public:
+		LZ4_Comp(ege::COMPRESSION_METHOD id);
+		~LZ4_Comp();
+
+	private:
+		Ipp8u* hashTable = nullptr;
 	};
 
 	struct fileProperties
@@ -116,7 +147,7 @@ namespace ege {
 		char extension[FILENAME_MAX];
 		char lastwrite[25];				// std::asctime has fixed 25 character
 		ege::COMPRESSION_METHOD compression;
-		int crypto_check;
+		int crypto_check;				// for compatibility
 #ifdef CRYPTOGRAPH_EGE
 		ege::CRYPTO_METHOD crypto;
 		IppHashAlgId hashmethod;
