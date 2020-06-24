@@ -10,7 +10,7 @@
 
 #define BUFFER_SIZE	 65536	//  64 kB
 #define COMP_BUFSIZ	131072	// 128 kB
-
+#define COMP_EXTEND	   512	// 0.5 kB
 
 namespace ege {
 	/*******************************************************************************************/
@@ -21,18 +21,35 @@ namespace ege {
 	{
 		NO_COMPRESS,
 		LZSS,			// Lempel-Ziv-Storer-Szymansk
-		ZLIB_FAST,
-		ZLIB_AVERAGE,
-		ZLIB_SLOW,
+		ZLIB_FAST,		// (Reserved)
+		ZLIB_AVERAGE,	// (Reserved)
+		ZLIB_SLOW,		// (Reserved)
 		LZO_FAST,		// Lempel-Ziv-Oberhumer (IppLZO1X1ST)
 		LZO_SLOW,		// Lempel-Ziv-Oberhumer (IppLZO1XST)
 		LZ4,
-		LZ4_HC			// High-compression mode
+		LZ4_HC			// High-compression mode (Reserved)
 	};
 	
 	/*******************************************************************************************/
 	/****************************************** Class ******************************************/
 	/*******************************************************************************************/
+	
+	/*************************************** File Header ***************************************/
+	struct fileProperties
+	{
+		int64_t size;
+		int64_t c_size;
+		char filename[FILENAME_MAX];
+		char extension[FILENAME_MAX];
+		char lastwrite[25];				// std::asctime has fixed 25 character
+		ege::COMPRESSION_METHOD compression;
+		int crypto_check;				// for compatibility
+#ifdef CRYPTOGRAPH_EGE
+		ege::CRYPTO_METHOD crypto;
+		IppHashAlgId hashmethod;
+		Ipp8u hashcode[MAX_HASH_LEN];
+#endif // CRYPTOGRAPH_EGE
+	};
 
 	/*************************************** FileHandler ***************************************/
 	class Filer
@@ -59,7 +76,7 @@ namespace ege {
 
 #ifdef CRYPTOGRAPH_EGE
 		void setKey(Ipp8u* key, size_t keylen);
-		Ipp8u* getKey(size_t &keylen);
+		Ipp8u* getKey(size_t *keylen);
 
 		void setEncryptionMethod(ege::CRYPTO_METHOD id);
 		ege::CRYPTO_METHOD getEncryptionMethod(char* type = nullptr);
@@ -77,7 +94,7 @@ namespace ege {
 		ege::COMPRESSION_METHOD compression_type = ege::COMPRESSION_METHOD::NO_COMPRESS;		
 
 		// Functions
-		bool checkfile(char* file);
+		inline bool checkfile(char* file);
 		const char* strcomptype(ege::COMPRESSION_METHOD id);		
 		ERR_STATUS compress(char* pathSrc, char* pathDest);
 		ERR_STATUS decompress(char* pathSrc, char* pathDest);
@@ -133,27 +150,13 @@ namespace ege {
 	{
 	public:
 		LZ4_Comp(ege::COMPRESSION_METHOD id);
+		ERR_STATUS encode(char* pathSrc, char* pathDest);
+		ERR_STATUS decode(char* pathSrc, char* pathDest);
 		~LZ4_Comp();
 
 	private:
 		Ipp8u* hashTable = nullptr;
 		Ipp8u* dict = nullptr;
-	};
-
-	struct fileProperties
-	{
-		int64_t size;
-		int64_t c_size;
-		char filename[FILENAME_MAX];
-		char extension[FILENAME_MAX];
-		char lastwrite[25];				// std::asctime has fixed 25 character
-		ege::COMPRESSION_METHOD compression;
-		int crypto_check;				// for compatibility
-#ifdef CRYPTOGRAPH_EGE
-		ege::CRYPTO_METHOD crypto;
-		IppHashAlgId hashmethod;
-		Ipp8u hashcode[MAX_HASH_LEN];
-#endif // CRYPTOGRAPH_EGE
 	};
 
 	/*******************************************************************************************/

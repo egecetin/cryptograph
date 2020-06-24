@@ -631,12 +631,12 @@ ege::Hash_Coder::Hash_Coder(IppHashAlgId id)
 		throw runtime_error(ege::sterror(status, IPP_ID));
 }
 
-inline ERR_STATUS ege::Hash_Coder::update(Ipp8u * msg, size_t lenmsg)
+ERR_STATUS ege::Hash_Coder::update(Ipp8u * msg, size_t lenmsg)
 {
 	return ippsHashUpdate(msg, lenmsg, this->context);
 }
 
-inline ERR_STATUS ege::Hash_Coder::getHash(Ipp8u *code)
+ERR_STATUS ege::Hash_Coder::getHash(Ipp8u *code)
 {
 	return ippsHashFinal(code, this->context);
 }

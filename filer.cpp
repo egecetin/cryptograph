@@ -1,6 +1,6 @@
 #include "filer.h"
 
-bool ege::Filer::checkfile(char * file)
+inline bool ege::Filer::checkfile(char * file)
 {
 	return std::experimental::filesystem::exists(file);
 }
@@ -28,12 +28,118 @@ const char * ege::Filer::strcomptype(ege::COMPRESSION_METHOD id)
 	}
 }
 
+ERR_STATUS ege::Filer::compress(char * pathSrc, char * pathDest)
+{
+	ERR_STATUS status = NO_ERROR;
+	FILE *src = fopen(pathSrc, "rb");
+	FILE *dest = fopen(pathDest, "wb");
+
+	if (!(src && dest)) {
+		fclose(src);
+		fclose(dest);
+		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
+		return FILE_INPUT_OUTPUT_ERR;
+	}
+
+	switch (this->compression_type)
+	{
+	case ege::LZSS:
+	{
+		LZSS_Comp compressor;
+		status = compressor.encode(pathSrc, pathDest);
+	}
+	case ege::ZLIB_FAST:
+		// Reserved
+	case ege::ZLIB_AVERAGE:
+		// Reserved
+	case ege::ZLIB_SLOW:
+		// Reserved
+	case ege::LZO_FAST:
+	{
+		LZO_Comp compressor(ege::LZO_FAST);
+		status = compressor.encode(pathSrc, pathDest);
+	}
+	case ege::LZO_SLOW:
+	{
+		LZO_Comp compressor(ege::LZO_FAST);
+		status = compressor.encode(pathSrc, pathDest);
+	}
+	case ege::LZ4:
+	{
+		LZ4_Comp compressor(ege::LZ4);
+		status = compressor.encode(pathSrc, pathDest);
+	}
+	case ege::LZ4_HC:
+	{
+		LZ4_Comp compressor(ege::LZ4_HC);
+		status = compressor.encode(pathSrc, pathDest);
+	}
+	default:
+		status = COMP_UNKNOWN_METHOD;
+	}
+
+	return status;
+}
+
+ERR_STATUS ege::Filer::decompress(char * pathSrc, char * pathDest)
+{
+	ERR_STATUS status = NO_ERROR;
+	FILE *src = fopen(pathSrc, "rb");
+	FILE *dest = fopen(pathDest, "wb");
+
+	if (!(src && dest)) {
+		fclose(src);
+		fclose(dest);
+		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
+		return FILE_INPUT_OUTPUT_ERR;
+	}
+
+	switch (this->compression_type)
+	{
+	case ege::LZSS:
+	{
+		LZSS_Comp compressor;
+		status = compressor.decode(pathSrc, pathDest);
+	}
+	case ege::ZLIB_FAST:
+		// Reserved
+	case ege::ZLIB_AVERAGE:
+		// Reserved
+	case ege::ZLIB_SLOW:
+		// Reserved
+	case ege::LZO_FAST:
+	{
+		LZO_Comp compressor(ege::LZO_FAST);
+		status = compressor.decode(pathSrc, pathDest);
+	}
+	case ege::LZO_SLOW:
+	{
+		LZO_Comp compressor(ege::LZO_FAST);
+		status = compressor.decode(pathSrc, pathDest);
+	}
+	case ege::LZ4:
+	{
+		LZ4_Comp compressor(ege::LZ4);
+		status = compressor.decode(pathSrc, pathDest);
+	}
+	case ege::LZ4_HC:
+	{
+		LZ4_Comp compressor(ege::LZ4_HC);
+		status = compressor.decode(pathSrc, pathDest);
+	}
+	default:
+		status = COMP_UNKNOWN_METHOD;
+	}
+
+	return status;
+}
+
 ERR_STATUS ege::Filer::copy(char * pathSrc, char * pathDest, int prepend)
 {
 	size_t size;
 	char buf[BUFFER_SIZE];	
 
-	FILE *src = fopen(this->path, "rb");
+	FILE *src = fopen(pathSrc, "rb");
 	FILE *dest = fopen(pathDest, "wb");
 	if (!(src && dest))
 		return FILE_INPUT_OUTPUT_ERR;
@@ -63,7 +169,7 @@ void ege::Filer::prepareHeader()
 	strcpy(this->context.filename, path.stem().string().c_str());
 	strcpy(this->context.extension, path.extension().string().c_str());
 	strcpy(this->context.lastwrite, this->readLastWrite(this->path));
-	this->context.compression = this->getCompressionType;
+	this->context.compression = this->getCompressionType();
 #ifdef CRYPTOGRAPH_EGE	
 	this->context.crypto = this->getEncryptionMethod();
 	this->context.crypto == ege::CRYPTO_METHOD::NO_ENCRYPT ? this->context.crypto_check = 0 : this->context.crypto_check = 1;
@@ -116,6 +222,8 @@ ERR_STATUS ege::Filer::readHeader(char * pathSrc)
 		if (this->context.crypto_check)
 			return CRYPT_NOT_SUPPORTED;
 	}
+
+	return NO_ERROR;
 }
 
 ERR_STATUS ege::Filer::writeHeader(char * pathDest)
@@ -131,6 +239,8 @@ ERR_STATUS ege::Filer::writeHeader(char * pathDest)
 	fwrite(&this->context, sizeof(this->context), 1, fptr);
 	fwrite("END!", sizeof(char) * 4, 1, fptr);
 	fclose(fptr);
+
+	return NO_ERROR;
 }
 
 void ege::Filer::configFromHeader()
@@ -199,7 +309,7 @@ ERR_STATUS ege::Filer::encrypt(char * pathSrc, char * pathDest)
 	if (!(src && dest)) {
 		fclose(src);
 		fclose(dest);
-		std::experimental::filesystem::exists(dest) ? std::experimental::filesystem::remove(dest) : void();
+		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
 		return FILE_INPUT_OUTPUT_ERR;
 	}
 
@@ -261,7 +371,7 @@ ERR_STATUS ege::Filer::decrypt(char * pathSrc, char * pathDest)
 	if (!(src && dest)) {
 		fclose(src);
 		fclose(dest);
-		std::experimental::filesystem::exists(dest) ? std::experimental::filesystem::remove(dest) : void();
+		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
 		return FILE_INPUT_OUTPUT_ERR;
 	}
 
@@ -350,6 +460,8 @@ ERR_STATUS ege::Filer::moveFile(char * pathDest, bool overwrite)
 	if (!overwrite && this->checkfile(pathDest))
 		return FILE_ALREADY_EXIST;
 	this->path[0] == pathDest[0] ? rename(this->path, pathDest) : this->copy(this->path, pathDest, 0);
+	
+	return NO_ERROR;
 }
 
 ERR_STATUS ege::Filer::copyFile(char * pathDest, bool overwrite)
@@ -472,7 +584,7 @@ ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 
 char* ege::Filer::getPath()
 {
-	char path[FILENAME_MAX];
+	char *path = (char*)malloc(FILENAME_MAX);
 	strcpy(path, this->path);
 	return path;
 }
@@ -496,10 +608,12 @@ void ege::Filer::setKey(Ipp8u * key, size_t keylen)
 	memcpy(this->key, key, sizeof(Ipp8u)*keylen);
 }
 
-Ipp8u * ege::Filer::getKey(size_t & keylen)
+Ipp8u * ege::Filer::getKey(size_t *keylen)
 {
 	Ipp8u* buff = (Ipp8u*)malloc(sizeof(Ipp8u)*this->keylen);
 	memcpy(buff, this->key, sizeof(Ipp8u)*this->keylen);
+	if (keylen != nullptr)
+		*keylen = this->keylen;
 	return buff;
 }
 
@@ -558,29 +672,29 @@ ERR_STATUS ege::LZSS_Comp::encode(char * pathSrc, char * pathDest)
 	if (!(src && dest)) {
 		fclose(src);
 		fclose(dest);
-		std::experimental::filesystem::exists(dest) ? std::experimental::filesystem::remove(dest) : void();
+		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
 		return FILE_INPUT_OUTPUT_ERR;
 	}
 
 	Ipp8u *buff_org = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ), *buff = buff_org;
-	Ipp8u *out_org = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ), *out = out_org;
+	Ipp8u *out_org = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ + COMP_EXTEND), *out = out_org;
 
-	size_buff = COMP_BUFSIZ, size_out = COMP_BUFSIZ;
-	if (size_buff = fread(buff, 1, COMP_BUFSIZ, src) > 0) {
+	size_buff = COMP_BUFSIZ, size_out = COMP_BUFSIZ + COMP_EXTEND;
+	if (size_buff = fread(buff, 1, COMP_BUFSIZ, src)) {
 		while (true) {
 			status = ippsEncodeLZSS_8u(&buff, &size_buff, &out, &size_out, this->context);
 			if (status == ippStsDstSizeLessExpected) {
 				fwrite(out_org, size_out, 1, dest);
 				out = out_org;
-				size_out = COMP_BUFSIZ;
+				size_out = COMP_BUFSIZ + COMP_EXTEND;
 			}
 			else if (status == NO_ERROR) {
 				fwrite(out, size_out, 1, dest);
 				size_buff = COMP_BUFSIZ;
-				size_out = COMP_BUFSIZ;
+				size_out = COMP_BUFSIZ + COMP_EXTEND;
 				buff = buff_org;
 				out = out_org;
-				if (size_buff = fread(buff, 1, COMP_BUFSIZ, src) <= 0)
+				if (size_buff = fread(buff, 1, COMP_BUFSIZ, src))
 					break;
 			}
 			else
@@ -616,7 +730,7 @@ ERR_STATUS ege::LZSS_Comp::decode(char * pathSrc, char * pathDest)
 	if (!(src && dest)) {
 		fclose(src);
 		fclose(dest);
-		std::experimental::filesystem::exists(dest) ? std::experimental::filesystem::remove(dest) : void();
+		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
 		return FILE_INPUT_OUTPUT_ERR;
 	}
 
@@ -624,7 +738,7 @@ ERR_STATUS ege::LZSS_Comp::decode(char * pathSrc, char * pathDest)
 	Ipp8u *out_org = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ * 4), *out = out_org;
 
 	size_buff = COMP_BUFSIZ, size_out = COMP_BUFSIZ * 4;
-	if (size_buff = fread(buff, 1, COMP_BUFSIZ, src) > 0) {
+	if (size_buff = fread(buff, 1, COMP_BUFSIZ, src)) {
 		while (true) {
 			status = ippsDecodeLZSS_8u(&buff, &size_buff, &out, &size_out, this->context);
 			if (status == ippStsDstSizeLessExpected) {
@@ -638,7 +752,7 @@ ERR_STATUS ege::LZSS_Comp::decode(char * pathSrc, char * pathDest)
 				size_out = COMP_BUFSIZ * 4;
 				buff = buff_org;
 				out = out_org;
-				if (size_buff = fread(buff, 1, COMP_BUFSIZ, src) <= 0)
+				if (size_buff = fread(buff, 1, COMP_BUFSIZ, src))
 					break;
 			}
 			else
@@ -688,19 +802,19 @@ ERR_STATUS ege::LZO_Comp::encode(char * pathSrc, char * pathDest)
 	if (!(src && dest)) {
 		fclose(src);
 		fclose(dest);
-		std::experimental::filesystem::exists(dest) ? std::experimental::filesystem::remove(dest) : void();
+		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
 		return FILE_INPUT_OUTPUT_ERR;
 	}
 
 	Ipp8u *buff = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ);
-	Ipp8u *out = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ);
+	Ipp8u *out = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ + COMP_EXTEND);
 
-	size_buff = COMP_BUFSIZ, size_out = COMP_BUFSIZ;
+	size_buff = COMP_BUFSIZ, size_out = COMP_BUFSIZ + COMP_EXTEND;
 	while (size_buff = fread(buff, 1, COMP_BUFSIZ, src)) {
-		if (status = ippsEncodeLZO_8u(buff, size_buff, out, &size_out, this->context) != NO_ERROR)
+		if (status = ippsEncodeLZO_8u(buff, size_buff, out, &size_out, this->context))
 			break;
 		fwrite(out, size_out, 1, dest);
-		size_out = COMP_BUFSIZ;
+		size_out = COMP_BUFSIZ + COMP_EXTEND;
 	}
 
 	free(buff);
@@ -710,7 +824,6 @@ ERR_STATUS ege::LZO_Comp::encode(char * pathSrc, char * pathDest)
 	fclose(dest);
 
 	return status;
-
 }
 
 ERR_STATUS ege::LZO_Comp::decode(char * pathSrc, char * pathDest)
@@ -724,7 +837,7 @@ ERR_STATUS ege::LZO_Comp::decode(char * pathSrc, char * pathDest)
 	if (!(src && dest)) {
 		fclose(src);
 		fclose(dest);
-		std::experimental::filesystem::exists(dest) ? std::experimental::filesystem::remove(dest) : void();
+		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
 		return FILE_INPUT_OUTPUT_ERR;
 	}
 
@@ -732,11 +845,23 @@ ERR_STATUS ege::LZO_Comp::decode(char * pathSrc, char * pathDest)
 	Ipp8u *out = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ * 4);
 
 	size_buff = COMP_BUFSIZ, size_out = COMP_BUFSIZ * 4;
-	while (size_buff = fread(buff, 1, COMP_BUFSIZ, src)) {
-		if (status = ippsDecodeLZOSafe_8u(buff, size_buff, out, &size_out) != NO_ERROR)
-			break;
-		fwrite(out, size_out, 1, dest);
-		size_out = COMP_BUFSIZ * 4;
+	if (size_buff = fread(buff, 1, COMP_BUFSIZ, src)) {
+		while (true)
+		{
+			status = ippsDecodeLZOSafe_8u(buff, size_buff, out, &size_out);
+			if (status == ippStsDstSizeLessExpected) {
+				out = (Ipp8u*)realloc(out, sizeof(Ipp8u)*size_out * 2);
+				size_out *= 2;
+			}
+			else if (status == NO_ERROR) {
+				fwrite(out, size_out, 1, dest);
+				size_out = COMP_BUFSIZ * 4;
+				if (size_buff = fread(buff, 1, COMP_BUFSIZ, src))
+					break;
+			}
+			else
+				break;
+		}		
 	}
 
 	free(buff);
@@ -753,3 +878,104 @@ ege::LZO_Comp::~LZO_Comp()
 	delete[](Ipp8u*)this->context;
 }
 
+ege::LZ4_Comp::LZ4_Comp(ege::COMPRESSION_METHOD id)
+{
+	int ctxSize;
+
+	switch (id)
+	{
+	case ege::LZ4_HC:
+		// Reserved
+	default:
+		ippsEncodeLZ4HashTableGetSize_8u(&ctxSize);
+		this->hashTable = new Ipp8u[ctxSize];
+		ippsEncodeLZ4HashTableInit_8u(this->hashTable, ctxSize);
+	}
+}
+
+ERR_STATUS ege::LZ4_Comp::encode(char * pathSrc, char * pathDest)
+{
+	ERR_STATUS status = NO_ERROR;
+	int size_buff, size_out;
+
+	FILE *src = fopen(pathSrc, "rb");
+	FILE *dest = fopen(pathDest, "wb");
+
+	if (!(src && dest)) {
+		fclose(src);
+		fclose(dest);
+		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
+		return FILE_INPUT_OUTPUT_ERR;
+	}
+
+	Ipp8u *buff = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ);
+	Ipp8u *out = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ + COMP_EXTEND);
+
+	size_buff = COMP_BUFSIZ, size_out = COMP_BUFSIZ + COMP_EXTEND;
+	while (size_buff = fread(buff, 1, COMP_BUFSIZ, src)) {
+		if (status = ippsEncodeLZ4_8u(buff, size_buff, out, &size_out, this->hashTable))
+			break;
+		fwrite(out, size_out, 1, dest);
+		size_out = COMP_BUFSIZ + COMP_EXTEND;
+	}
+
+	free(buff);
+	free(out);
+
+	fclose(src);
+	fclose(dest);
+
+	return status;
+}
+
+ERR_STATUS ege::LZ4_Comp::decode(char * pathSrc, char * pathDest)
+{
+	ERR_STATUS status = NO_ERROR;
+	int size_buff, size_out;
+
+	FILE *src = fopen(pathSrc, "rb");
+	FILE *dest = fopen(pathDest, "wb");
+
+	if (!(src && dest)) {
+		fclose(src);
+		fclose(dest);
+		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
+		return FILE_INPUT_OUTPUT_ERR;
+	}
+
+	Ipp8u *buff = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ);
+	Ipp8u *out = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ * 4);
+
+	size_buff = COMP_BUFSIZ, size_out = COMP_BUFSIZ * 4;
+	if (size_buff = fread(buff, 1, COMP_BUFSIZ, src)) {
+		while (true)
+		{
+			status = ippsDecodeLZ4_8u(buff, size_buff, out, &size_out);
+			if (status == ippStsDstSizeLessExpected) {
+				out = (Ipp8u*)realloc(out, sizeof(Ipp8u)*size_out * 2);
+				size_out *= 2;
+			}
+			else if (status == NO_ERROR) {
+				fwrite(out, size_out, 1, dest);
+				size_out = COMP_BUFSIZ * 4;
+				if (size_buff = fread(buff, 1, COMP_BUFSIZ, src))
+					break;
+			}
+			else
+				break;
+		}
+	}
+
+	free(buff);
+	free(out);
+
+	fclose(src);
+	fclose(dest);
+
+	return status;
+}
+
+ege::LZ4_Comp::~LZ4_Comp()
+{
+	delete[](Ipp8u*)this->hashTable;
+}
