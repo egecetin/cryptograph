@@ -309,5 +309,93 @@
   </widget>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>pushButton_2</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>srcPathClicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>607</x>
+     <y>125</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>646</x>
+     <y>125</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>destPathClicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>609</x>
+     <y>210</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>650</x>
+     <y>210</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>comboBox</sender>
+   <signal>currentIndexChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>compressionMethod(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>646</x>
+     <y>255</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>709</x>
+     <y>260</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>comboBox_2</sender>
+   <signal>currentIndexChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>encryptionMethod(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>647</x>
+     <y>285</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>707</x>
+     <y>285</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_5</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>convert()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>590</x>
+     <y>429</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>648</x>
+     <y>429</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>srcPathClicked()</slot>
+  <slot>destPathClicked()</slot>
+  <slot>compressionMethod(int)</slot>
+  <slot>encryptionMethod(int)</slot>
+  <slot>convert()</slot>
+ </slots>
 </ui>
