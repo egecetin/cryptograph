@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>715</width>
+    <width>730</width>
     <height>485</height>
    </rect>
   </property>
@@ -21,13 +21,13 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>715</width>
+    <width>730</width>
     <height>485</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>715</width>
+    <width>730</width>
     <height>485</height>
    </size>
   </property>
@@ -52,8 +52,8 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>692</width>
-      <height>441</height>
+      <width>715</width>
+      <height>442</height>
      </rect>
     </property>
     <layout class="QHBoxLayout" name="horizontalLayout">
@@ -80,7 +80,7 @@
           <x>0</x>
           <y>0</y>
           <width>448</width>
-          <height>437</height>
+          <height>438</height>
          </rect>
         </property>
        </widget>
@@ -129,15 +129,24 @@
             <widget class="QLabel" name="label_2">
              <property name="minimumSize">
               <size>
-               <width>0</width>
+               <width>235</width>
                <height>45</height>
               </size>
              </property>
+             <property name="maximumSize">
+              <size>
+               <width>240</width>
+               <height>16777215</height>
+              </size>
+             </property>
              <property name="text">
-              <string>TextLabel</string>
+              <string/>
              </property>
              <property name="alignment">
               <set>Qt::AlignCenter</set>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
              </property>
             </widget>
            </item>
@@ -164,15 +173,24 @@
              </property>
              <property name="minimumSize">
               <size>
-               <width>0</width>
+               <width>235</width>
                <height>45</height>
               </size>
              </property>
+             <property name="maximumSize">
+              <size>
+               <width>240</width>
+               <height>16777215</height>
+              </size>
+             </property>
              <property name="text">
-              <string>TextLabel</string>
+              <string/>
              </property>
              <property name="alignment">
               <set>Qt::AlignCenter</set>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
              </property>
             </widget>
            </item>
@@ -213,7 +231,59 @@
               </widget>
              </item>
              <item>
-              <widget class="QComboBox" name="comboBox"/>
+              <widget class="QComboBox" name="comboBox">
+               <property name="maximumSize">
+                <size>
+                 <width>120</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <item>
+                <property name="text">
+                 <string>No Compression</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>LZSS</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>ZLIB (Fast)</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>ZLIB</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>ZLIB (Slow)</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>LZO (Fast)</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>LZO (Slow)</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>LZ4</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>LZ4 High Compression</string>
+                </property>
+               </item>
+              </widget>
              </item>
             </layout>
            </item>
@@ -227,7 +297,39 @@
               </widget>
              </item>
              <item>
-              <widget class="QComboBox" name="comboBox_2"/>
+              <widget class="QComboBox" name="comboBox_2">
+               <property name="maximumSize">
+                <size>
+                 <width>120</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <item>
+                <property name="text">
+                 <string>No Encryption</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>AES</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>SMS4</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>RSA</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>ECCP</string>
+                </property>
+               </item>
+              </widget>
              </item>
             </layout>
            </item>
@@ -244,17 +346,23 @@
           </widget>
          </item>
          <item>
-          <spacer name="verticalSpacer">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
+          <widget class="QLabel" name="label_6">
+           <property name="minimumSize">
             <size>
-             <width>20</width>
-             <height>40</height>
+             <width>235</width>
+             <height>85</height>
             </size>
            </property>
-          </spacer>
+           <property name="maximumSize">
+            <size>
+             <width>240</width>
+             <height>85</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-family:'Bahnschrift Condensed','sans-serif'; font-size:10pt;&quot;&gt;Cryptography is typically bypassed, not penetrated.&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-family:'Bahnschrift Condensed','sans-serif'; font-size:10pt;&quot;&gt;Adi Shamir&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+          </widget>
          </item>
          <item>
           <widget class="QFrame" name="frame_4">
@@ -284,7 +392,7 @@
            <item>
             <widget class="QProgressBar" name="progressBar">
              <property name="value">
-              <number>24</number>
+              <number>0</number>
              </property>
             </widget>
            </item>
@@ -302,7 +410,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>715</width>
+     <width>730</width>
      <height>21</height>
     </rect>
    </property>

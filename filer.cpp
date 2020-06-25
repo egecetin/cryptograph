@@ -47,6 +47,7 @@ ERR_STATUS ege::Filer::compress(char * pathSrc, char * pathDest)
 	{
 		LZSS_Comp compressor;
 		status = compressor.encode(pathSrc, pathDest);
+		break;
 	}
 	case ege::ZLIB_FAST:
 		// Reserved
@@ -58,21 +59,25 @@ ERR_STATUS ege::Filer::compress(char * pathSrc, char * pathDest)
 	{
 		LZO_Comp compressor(ege::LZO_FAST);
 		status = compressor.encode(pathSrc, pathDest);
+		break;
 	}
 	case ege::LZO_SLOW:
 	{
 		LZO_Comp compressor(ege::LZO_FAST);
 		status = compressor.encode(pathSrc, pathDest);
+		break;
 	}
 	case ege::LZ4:
 	{
 		LZ4_Comp compressor(ege::LZ4);
 		status = compressor.encode(pathSrc, pathDest);
+		break;
 	}
 	case ege::LZ4_HC:
 	{
 		LZ4_Comp compressor(ege::LZ4_HC);
 		status = compressor.encode(pathSrc, pathDest);
+		break;
 	}
 	default:
 		status = COMP_UNKNOWN_METHOD;
@@ -100,6 +105,7 @@ ERR_STATUS ege::Filer::decompress(char * pathSrc, char * pathDest)
 	{
 		LZSS_Comp compressor;
 		status = compressor.decode(pathSrc, pathDest);
+		break;
 	}
 	case ege::ZLIB_FAST:
 		// Reserved
@@ -111,21 +117,25 @@ ERR_STATUS ege::Filer::decompress(char * pathSrc, char * pathDest)
 	{
 		LZO_Comp compressor(ege::LZO_FAST);
 		status = compressor.decode(pathSrc, pathDest);
+		break;
 	}
 	case ege::LZO_SLOW:
 	{
 		LZO_Comp compressor(ege::LZO_FAST);
 		status = compressor.decode(pathSrc, pathDest);
+		break;
 	}
 	case ege::LZ4:
 	{
 		LZ4_Comp compressor(ege::LZ4);
 		status = compressor.decode(pathSrc, pathDest);
+		break;
 	}
 	case ege::LZ4_HC:
 	{
 		LZ4_Comp compressor(ege::LZ4_HC);
 		status = compressor.decode(pathSrc, pathDest);
+		break;
 	}
 	default:
 		status = COMP_UNKNOWN_METHOD;
@@ -331,6 +341,7 @@ ERR_STATUS ege::Filer::encrypt(char * pathSrc, char * pathDest)
 				break;
 			fwrite(cipher, size, 1, dest);
 		}
+		break;
 	}
 	case ege::CRYPTO_METHOD::SMS4:
 	{
@@ -342,6 +353,7 @@ ERR_STATUS ege::Filer::encrypt(char * pathSrc, char * pathDest)
 				break;
 			fwrite(cipher, size, 1, dest);
 		}
+		break;
 	}
 	case ege::CRYPTO_METHOD::RSA:
 		// Reserved
@@ -393,6 +405,7 @@ ERR_STATUS ege::Filer::decrypt(char * pathSrc, char * pathDest)
 				break;
 			fwrite(buff, size, 1, dest);
 		}
+		break;
 	}
 	case ege::CRYPTO_METHOD::SMS4:
 	{
@@ -404,6 +417,7 @@ ERR_STATUS ege::Filer::decrypt(char * pathSrc, char * pathDest)
 				break;
 			fwrite(buff, size, 1, dest);
 		}
+		break;
 	}
 	case ege::CRYPTO_METHOD::RSA:
 		// Reserved
@@ -782,8 +796,10 @@ ege::LZO_Comp::LZO_Comp(ege::COMPRESSION_METHOD id)
 	{
 	case ege::LZO_FAST:
 		ippsEncodeLZOGetSize(IppLZO1X1ST, 0, &ctxSize);
+		break;
 	case ege::LZO_SLOW:
 		ippsEncodeLZOGetSize(IppLZO1XST, 0, &ctxSize);
+		break;
 	default:
 		ippsEncodeLZOGetSize(IppLZO1X1ST, 0, &ctxSize);
 	}
