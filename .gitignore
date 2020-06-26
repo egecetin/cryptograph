@@ -429,3 +429,6 @@ Thumbs.db
 *.dll
 *.exe
 
+/deneme_in.txt
+/deneme_dest2.txt
+/deneme_dest.txt

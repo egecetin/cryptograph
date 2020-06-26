@@ -1,5 +1,6 @@
 #include "filer.h"
 
+
 inline bool ege::Filer::checkfile(char * file)
 {
 	return std::experimental::filesystem::exists(file);
@@ -31,15 +32,6 @@ const char * ege::Filer::strcomptype(ege::COMPRESSION_METHOD id)
 ERR_STATUS ege::Filer::compress(char * pathSrc, char * pathDest)
 {
 	ERR_STATUS status = NO_ERROR;
-	FILE *src = fopen(pathSrc, "rb");
-	FILE *dest = fopen(pathDest, "wb");
-
-	if (!(src && dest)) {
-		fclose(src);
-		fclose(dest);
-		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
-		return FILE_INPUT_OUTPUT_ERR;
-	}
 
 	switch (this->compression_type)
 	{
@@ -146,15 +138,20 @@ ERR_STATUS ege::Filer::decompress(char * pathSrc, char * pathDest)
 
 ERR_STATUS ege::Filer::copy(char * pathSrc, char * pathDest, int prepend)
 {
+	if (!prepend && pathSrc[0] == pathDest[0]) { // If no change and at same drive only rename
+		rename(pathSrc, pathDest);
+		return NO_ERROR;
+	}
+
 	size_t size;
-	char buf[BUFFER_SIZE];	
+	char buf[BUFFER_SIZE];
 
 	FILE *src = fopen(pathSrc, "rb");
 	FILE *dest = fopen(pathDest, "wb");
 	if (!(src && dest))
 		return FILE_INPUT_OUTPUT_ERR;
 	if (prepend == 1) // Allocate header
-		fwrite('\0', 1, sizeof(ege::fileProperties) + 8, dest);
+		fwrite("0", 1, sizeof(ege::fileProperties) + 8 + sizeof(size_t), dest);
 	if (prepend == -1) { // Deallocate header
 		fread(buf, 1, 4, src);
 		fread(&size, sizeof(size_t), 1, src); // Read size
@@ -176,7 +173,7 @@ void ege::Filer::prepareHeader()
 	std::experimental::filesystem::path path = this->path;
 
 	this->context.size = this->readSize(this->path);
-	strcpy(this->context.filename, path.stem().string().c_str());
+	strcpy(this->context.filename, path.filename().string().c_str());
 	strcpy(this->context.extension, path.extension().string().c_str());
 	strcpy(this->context.lastwrite, this->readLastWrite(this->path));
 	this->context.compression = this->getCompressionType();
@@ -196,10 +193,10 @@ ERR_STATUS ege::Filer::readHeader(char * pathSrc)
 	if (!fptr)
 		return FILE_INPUT_OUTPUT_ERR;
 
-	char buffer[5];
+	char buffer[5]; buffer[4] = '\0';
 	size_t size = 0;
 
-	fread(buffer, 5, 1, fptr);
+	fread(buffer, 4, 1, fptr);
 	if (strcmp(buffer, "EGE!"))
 		return FILE_NOT_SUPPORTED;
 	fread(&size, sizeof(size_t), 1, fptr); // Read size
@@ -207,7 +204,7 @@ ERR_STATUS ege::Filer::readHeader(char * pathSrc)
 	if (size == sizeof(ege::fileProperties)) { // HOST + CLIENT EQUAL
 		fread(&this->context, sizeof(ege::fileProperties), 1, fptr);
 		
-		fread(buffer, 5, 1, fptr);
+		fread(buffer, 4, 1, fptr);
 		if (strcmp(buffer, "END!"))
 			return FILE_NOT_SUPPORTED;
 	}
@@ -454,7 +451,7 @@ ege::Filer::Filer(char * pathSrc)
 ERR_STATUS ege::Filer::setPath(char * pathSrc)
 {
 	if (strlen(pathSrc) < FILENAME_MAX && pathSrc) {
-		if (this->checkfile(this->path)) {
+		if (this->checkfile(pathSrc)) {
 			strcpy(this->path, pathSrc);
 			return NO_ERROR;
 		}
@@ -520,20 +517,18 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 
 #ifdef CRYPTOGRAPH_EGE
 	if (this->context.crypto != NO_ENCRYPT) {
-
 		if (this->key == nullptr)
 			return CRYPT_KEY_NOT_SET;
 		while (std::experimental::filesystem::exists(dest)) // For ensure thread safety
 			tmpnam(dest);
-		if (status = this->encrypt(src, dest)) {
-			return status;
-		}
+		status = this->encrypt(src, dest);
 	}
 #endif // CRYPTOGRAPH_EGE
 	this->progress = 66;
-
-	status = this->copy(dest, pathDest, 1);
-	this->writeHeader(pathDest);
+	if (!status) {
+		status = this->copy(dest, pathDest, 1);
+		this->writeHeader(pathDest);
+	}
 	this->progress = 100;
 
 	std::experimental::filesystem::exists(tempname) ? std::experimental::filesystem::remove(tempname) : void();
@@ -620,6 +615,7 @@ void ege::Filer::setKey(Ipp8u * key, size_t keylen)
 {
 	this->key = (Ipp8u*)malloc(sizeof(Ipp8u)*keylen);
 	memcpy(this->key, key, sizeof(Ipp8u)*keylen);
+	this->keylen = keylen;
 }
 
 Ipp8u * ege::Filer::getKey(size_t *keylen)

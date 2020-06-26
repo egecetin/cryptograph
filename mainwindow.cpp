@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -85,23 +86,24 @@ MainWindow::~MainWindow()
 
 void MainWindow::setPath(int id)
 {
-	QString fileName = QFileDialog::getOpenFileName(this);
+	QString fileName;	
 	
 	switch (id)
 	{
 	case 1:
 	{
+		fileName = QFileDialog::getOpenFileName(this);
 		ui->label_2->setText(fileName);
 		this->pathSrc = fileName.toStdString();
 		break;
 	}
 	case 2:
 	{
+		fileName = QFileDialog::getSaveFileName(this);
 		ui->label->setText(fileName);
 		this->pathDest = fileName.toStdString();
 		break;
 	}
-
 	}
 }
 

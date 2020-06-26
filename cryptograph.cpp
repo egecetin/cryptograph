@@ -563,6 +563,7 @@ ege::AES_Crypt::AES_Crypt(Ipp8u* pkey)
 		throw runtime_error(ege::sterror(status, IPP_ID));
 	this->key = (IppsAESSpec*)(new Ipp8u[ctxSize]);
 	this->ctr = new Ipp8u[16];
+	memset(this->ctr, 1, 16);
 
 	if (pkey == nullptr) {
 		pkey = rand8(256 / 8);
@@ -581,7 +582,7 @@ inline ERR_STATUS ege::AES_Crypt::setKey(Ipp8u * pkey)
 ERR_STATUS ege::AES_Crypt::encryptMessage(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphertext, Ipp8u *ctr, int ctrBitLen)
 {
 	if (ctr == nullptr)
-		return ippsAESEncryptCTR(msg, ciphertext, lenmsg, this->key, this->ctr, 16 * sizeof(Ipp8u));
+		return ippsAESEncryptCTR(msg, ciphertext, lenmsg, this->key, this->ctr, 16 * 8);
 	else
 		return ippsAESEncryptCTR(msg, ciphertext, lenmsg, this->key, ctr, ctrBitLen);
 }
@@ -589,7 +590,7 @@ ERR_STATUS ege::AES_Crypt::encryptMessage(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphe
 ERR_STATUS ege::AES_Crypt::decryptMessage(Ipp8u *&ciphertext, Ipp8u *&msg, int &lenmsg, Ipp8u *ctr, int ctrBitLen)
 {
 	if (ctr == nullptr)
-		return ippsAESDecryptCTR(ciphertext, msg, lenmsg, this->key, this->ctr, 16 * sizeof(Ipp8u));
+		return ippsAESDecryptCTR(ciphertext, msg, lenmsg, this->key, this->ctr, 16 * 8);
 	else
 		return ippsAESDecryptCTR(ciphertext, msg, lenmsg, this->key, ctr, ctrBitLen);
 }
@@ -657,6 +658,7 @@ ege::SMS4_Crypt::SMS4_Crypt(Ipp8u * pkey)
 		throw runtime_error(ege::sterror(status, IPP_ID));
 	this->key = (IppsSMS4Spec*)(new Ipp8u[ctxSize]);
 	this->ctr = new Ipp8u[16];
+	memset(this->ctr, 1, 16);
 
 	if (pkey == nullptr) {
 		pkey = rand8(256 / 8);
@@ -675,7 +677,7 @@ inline ERR_STATUS ege::SMS4_Crypt::setKey(Ipp8u * key)
 ERR_STATUS ege::SMS4_Crypt::encryptMessage(Ipp8u *& msg, int lenmsg, Ipp8u *& ciphertext, Ipp8u * ctr, int ctrBitLen)
 {
 	if (ctr == nullptr)
-		return ippsSMS4EncryptCTR(msg, ciphertext, lenmsg, this->key, this->ctr, 16 * sizeof(Ipp8u));
+		return ippsSMS4EncryptCTR(msg, ciphertext, lenmsg, this->key, this->ctr, 16 * 8);
 	else
 		return ippsSMS4EncryptCTR(msg, ciphertext, lenmsg, this->key, ctr, ctrBitLen);
 }
@@ -683,7 +685,7 @@ ERR_STATUS ege::SMS4_Crypt::encryptMessage(Ipp8u *& msg, int lenmsg, Ipp8u *& ci
 ERR_STATUS ege::SMS4_Crypt::decryptMessage(Ipp8u *& ciphertext, Ipp8u *& msg, int & lenmsg, Ipp8u * ctr, int ctrBitLen)
 {
 	if (ctr == nullptr)
-		return ippsSMS4DecryptCTR(ciphertext, msg, lenmsg, this->key, this->ctr, 16 * sizeof(Ipp8u));
+		return ippsSMS4DecryptCTR(ciphertext, msg, lenmsg, this->key, this->ctr, 16 * 8);
 	else
 		return ippsSMS4DecryptCTR(ciphertext, msg, lenmsg, this->key, ctr, ctrBitLen);
 }
