@@ -90,15 +90,16 @@ namespace ege {
 	private:
 		// Variables
 		char *path = nullptr;
+		double multiplier = 1;
 		ege::fileProperties context;
 		ege::COMPRESSION_METHOD compression_type = ege::COMPRESSION_METHOD::NO_COMPRESS;		
 
 		// Functions
 		inline bool checkfile(char* file);
 		const char* strcomptype(ege::COMPRESSION_METHOD id);		
-		ERR_STATUS compress(char* pathSrc, char* pathDest);
-		ERR_STATUS decompress(char* pathSrc, char* pathDest);
-		ERR_STATUS copy(char* pathSrc, char* pathDest, int prepend = 0);
+		ERR_STATUS compress(FILE* Src, FILE* Dest);
+		ERR_STATUS decompress(FILE* Src, FILE* Dest);
+		ERR_STATUS copy(char* pathSrc, char* pathDest);
 		ERR_STATUS readHeader(char* pathSrc);
 		void prepareHeader();
 		ERR_STATUS writeHeader(char* pathDest);
@@ -107,13 +108,13 @@ namespace ege {
 #ifdef CRYPTOGRAPH_EGE
 		size_t keylen = 0;
 		Ipp8u* key = nullptr;
-		IppHashAlgId hash_type = ippHashAlg_Unknown;		
+		IppHashAlgId hash_type = ippHashAlg_SHA512;		
 		ege::CRYPTO_METHOD crypto_type = ege::CRYPTO_METHOD::NO_ENCRYPT;
 
 		const char* strhashtype(IppHashAlgId id);
 		const char* strcrypttype(ege::CRYPTO_METHOD id);
-		ERR_STATUS encrypt(char* pathSrc, char* pathDest);
-		ERR_STATUS decrypt(char* pathSrc, char* pathDest);
+		ERR_STATUS encrypt(FILE* Src, FILE* Dest);
+		ERR_STATUS decrypt(FILE* Src, FILE* Dest);
 #endif // CRYPTOGRAPH_EGE
 	
 	};
@@ -125,6 +126,8 @@ namespace ege {
 		LZSS_Comp();
 		ERR_STATUS encode(char* pathSrc, char* pathDest);
 		ERR_STATUS decode(char* pathSrc, char* pathDest);
+		ERR_STATUS encode(FILE *fsrc, FILE *fdst);
+		ERR_STATUS decode(FILE *fsrc, FILE *fdst);
 		~LZSS_Comp();
 
 	private:
@@ -138,6 +141,8 @@ namespace ege {
 		LZO_Comp(ege::COMPRESSION_METHOD id);
 		ERR_STATUS encode(char* pathSrc, char* pathDest);
 		ERR_STATUS decode(char* pathSrc, char* pathDest);
+		ERR_STATUS encode(FILE *fsrc, FILE *fdst);
+		ERR_STATUS decode(FILE *fsrc, FILE *fdst);
 		~LZO_Comp();
 
 	private:
@@ -152,11 +157,13 @@ namespace ege {
 		LZ4_Comp(ege::COMPRESSION_METHOD id);
 		ERR_STATUS encode(char* pathSrc, char* pathDest);
 		ERR_STATUS decode(char* pathSrc, char* pathDest);
+		ERR_STATUS encode(FILE *fsrc, FILE *fdst);
+		ERR_STATUS decode(FILE *fsrc, FILE *fdst);
 		~LZ4_Comp();
 
 	private:
 		Ipp8u* hashTable = nullptr;
-		Ipp8u* dict = nullptr;
+		Ipp8u* dict = nullptr; // Reserved
 	};
 
 	/*******************************************************************************************/

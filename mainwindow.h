@@ -22,6 +22,7 @@ public:
 	Q_SLOT void destPathClicked();
 	Q_SLOT void compressionMethod(int id);
 	Q_SLOT void encryptionMethod(int id);
+	Q_SLOT void hashMethod(int id);
 	void convert();
 
 private:
@@ -29,6 +30,7 @@ private:
 	std::string pathSrc, pathDest;
 	ege::COMPRESSION_METHOD comp;
 	ege::CRYPTO_METHOD crypt;
+	IppHashAlgId hash;
 
 	void setPath(int id);
 

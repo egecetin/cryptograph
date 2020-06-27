@@ -6,6 +6,8 @@
 #include <iostream>
 #include <fstream>
 
+#include <QDebug>
+
 typedef int ERR_STATUS;
 
 /* Error Classifiers*/
@@ -17,6 +19,7 @@ typedef int ERR_STATUS;
 
 /* General Error Code Definitions */
 #define NO_ERROR				0
+#define UNKNOWN_ERROR			1
 
 /* OpenCL Error Codes*/
 #define OPENCL_NOT_AVAILABLE	1

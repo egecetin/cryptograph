@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>730</width>
-    <height>485</height>
+    <height>505</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -22,13 +22,13 @@
   <property name="minimumSize">
    <size>
     <width>730</width>
-    <height>485</height>
+    <height>505</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
     <width>730</width>
-    <height>485</height>
+    <height>505</height>
    </size>
   </property>
   <property name="acceptDrops">
@@ -53,7 +53,7 @@
       <x>10</x>
       <y>10</y>
       <width>715</width>
-      <height>442</height>
+      <height>464</height>
      </rect>
     </property>
     <layout class="QHBoxLayout" name="horizontalLayout">
@@ -80,7 +80,7 @@
           <x>0</x>
           <y>0</y>
           <width>448</width>
-          <height>438</height>
+          <height>460</height>
          </rect>
         </property>
        </widget>
@@ -232,6 +232,12 @@
              </item>
              <item>
               <widget class="QComboBox" name="comboBox">
+               <property name="minimumSize">
+                <size>
+                 <width>120</width>
+                 <height>0</height>
+                </size>
+               </property>
                <property name="maximumSize">
                 <size>
                  <width>120</width>
@@ -288,6 +294,78 @@
             </layout>
            </item>
            <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_4">
+             <item>
+              <widget class="QLabel" name="label_7">
+               <property name="text">
+                <string>Hash Algorithm          :</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="comboBox_3">
+               <property name="minimumSize">
+                <size>
+                 <width>120</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>120</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <item>
+                <property name="text">
+                 <string>SHA1</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>SHA-256</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>SHA-224</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>SHA-512</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>SHA-384</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>MD5</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>SM3</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>SHA-512/224</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>SHA-512/256</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
             <layout class="QHBoxLayout" name="horizontalLayout_3">
              <item>
               <widget class="QLabel" name="label_4">
@@ -298,6 +376,12 @@
              </item>
              <item>
               <widget class="QComboBox" name="comboBox_2">
+               <property name="minimumSize">
+                <size>
+                 <width>120</width>
+                 <height>0</height>
+                </size>
+               </property>
                <property name="maximumSize">
                 <size>
                  <width>120</width>
@@ -350,13 +434,13 @@
            <property name="minimumSize">
             <size>
              <width>235</width>
-             <height>85</height>
+             <height>55</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>240</width>
-             <height>85</height>
+             <height>55</height>
             </size>
            </property>
            <property name="text">
@@ -473,8 +557,8 @@
    <slot>encryptionMethod(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>647</x>
-     <y>285</y>
+     <x>719</x>
+     <y>322</y>
     </hint>
     <hint type="destinationlabel">
      <x>707</x>
@@ -489,12 +573,28 @@
    <slot>convert()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>590</x>
-     <y>429</y>
+     <x>636</x>
+     <y>463</y>
     </hint>
     <hint type="destinationlabel">
      <x>648</x>
      <y>429</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>comboBox_3</sender>
+   <signal>currentIndexChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>hashMethod(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>642</x>
+     <y>290</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>556</x>
+     <y>300</y>
     </hint>
    </hints>
   </connection>
@@ -505,5 +605,6 @@
   <slot>compressionMethod(int)</slot>
   <slot>encryptionMethod(int)</slot>
   <slot>convert()</slot>
+  <slot>hashMethod(int)</slot>
  </slots>
 </ui>
