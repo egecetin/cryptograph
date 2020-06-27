@@ -42,6 +42,7 @@ typedef int ERR_STATUS;
 #define FILE_ALREADY_EXIST		34
 #define OVER_FILENAME_LIMIT		35
 #define COMP_UNKNOWN_METHOD		36
+#define COMP_CLASS_BROKEN		37
 
 /* Cryptography Error Codes*/
 #define CRYPT_NOT_SUPPORTED		40

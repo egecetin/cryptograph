@@ -12,15 +12,15 @@ int main(int argc, char *argv[])
 	//char path1[] = "C:\\Users\\egece\\Videos\\Ace Combat 7 _ Skies Unknown - Movie Cutscenes.mp4";
 	//char path2[] = "C:\\Users\\egece\\Videos\\Ace Combat 7 _ Skies Unknown - Movie Cutscenes_enc.ege";
 	//char path3[] = "C:\\Users\\egece\\Videos\\Ace Combat 7 _ Skies Unknown - Movie Cutscenes_rec.mp4";
-	//abcd.setKey(key, 32);
+	abcd.setKey(key, 32);
 	abcd.setPath(path1);
-	abcd.setCompressionType(ege::LZSS);
-	abcd.setEncryptionMethod(ege::NO_ENCRYPT);
-	//abcd.setHashMethod(ippHashAlg_SHA512);
+	abcd.setCompressionType(ege::LZ4);
+	abcd.setEncryptionMethod(ege::AES);
+	abcd.setHashMethod(ippHashAlg_SHA512);
 	abcd.pack(path2, true);
 
 	dcba.setPath(path2);
-	//dcba.setKey(key, 32);
+	dcba.setKey(key, 32);
 	dcba.unpack(path3, true);
 
 

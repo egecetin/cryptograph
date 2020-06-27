@@ -226,7 +226,7 @@ const char * ege::Filer::strhashtype(IppHashAlgId id)
 	switch (id)
 	{
 	case ippHashAlg_Unknown:
-		return "No Hash Check.";
+		return "Unknown hash code.";
 	case ippHashAlg_SHA1:
 		return "SHA-1";
 	case ippHashAlg_SHA256:
@@ -441,7 +441,7 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 	this->prepareHeader();	
 
 	fsrc = fopen(this->path, "rb");
-	if (this->context.compression != NO_COMPRESS && !this->context.crypto_check) { // Only compress	
+	if (this->context.compression != NO_COMPRESS && !this->context.crypto_check) {	// Only compress	
 		fdst = fopen(pathDest, "wb");
 		if (!(fsrc && fdst)) {
 			status = FILE_INPUT_OUTPUT_ERR;
@@ -449,7 +449,7 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 		}
 
 		this->multiplier = 2;
-		fwrite("0", 1, sizeof(ege::fileProperties) + 8 + sizeof(size_t), fdst);		
+		fwrite("0", sizeof(ege::fileProperties) + 8 + sizeof(size_t), 1, fdst);		// Write random memory
 		if (status = this->compress(fsrc, fdst))
 			goto cleanup;
 	}
@@ -573,11 +573,11 @@ ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 			goto cleanup;
 		this->progress = 50;
 
-		if (status = this->decompress(fsrc, fdst))
-			goto cleanup;		
-
 		fclose(fsrc); fsrc = fopen(tempname, "rb");
 		fclose(fdst); fdst = fopen(pathDest, "wb");
+
+		if (status = this->decompress(fsrc, fdst))
+			goto cleanup;
 	#else
 		return CRYPT_NOT_SUPPORTED;
 	#endif // CRYPTOGRAPH_EGE
@@ -726,8 +726,9 @@ ERR_STATUS ege::LZSS_Comp::encode(FILE * fsrc, FILE * fdst)
 	Ipp8u *buff_org = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ), *buff = buff_org;
 	Ipp8u *out_org = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ + COMP_EXTEND), *out = out_org;
 
-	size_buff = COMP_BUFSIZ, size_out = COMP_BUFSIZ + COMP_EXTEND;
-	if (size_buff = fread(buff, 1, COMP_BUFSIZ, fsrc)) {
+	size_out = COMP_BUFSIZ + COMP_EXTEND;
+	size_buff = fread(buff, 1, COMP_BUFSIZ, fsrc);
+	if (size_buff) {
 		while (true) {
 			status = ippsEncodeLZSS_8u(&buff, &size_buff, &out, &size_out, this->context);
 			if (status == ippStsDstSizeLessExpected) {
@@ -736,13 +737,13 @@ ERR_STATUS ege::LZSS_Comp::encode(FILE * fsrc, FILE * fdst)
 				size_out = COMP_BUFSIZ + COMP_EXTEND;
 			}
 			else if (status == NO_ERROR) {
-				qDebug() << fwrite(out_org, COMP_BUFSIZ + COMP_EXTEND - size_out, 1, fdst);
-				qDebug() << COMP_BUFSIZ + COMP_EXTEND - size_out;
+				fwrite(out_org, COMP_BUFSIZ + COMP_EXTEND - size_out, 1, fdst);
 				size_buff = 0;
 				size_out = COMP_BUFSIZ + COMP_EXTEND;
 				buff = buff_org;
 				out = out_org;
-				if (size_buff = fread(buff, 1, COMP_BUFSIZ, fsrc) <= 0)
+				size_buff = fread(buff, 1, COMP_BUFSIZ, fsrc);
+				if (!size_buff)
 					break;
 			}
 			else
@@ -750,7 +751,7 @@ ERR_STATUS ege::LZSS_Comp::encode(FILE * fsrc, FILE * fdst)
 		}
 	}
 
-	if (status == NO_ERROR) { // Last bits
+	if (!status) { // Last bits
 		status = ippsEncodeLZSSFlush_8u(&out, &size_out, this->context);
 		fwrite(out_org, COMP_BUFSIZ + COMP_EXTEND - size_out, 1, fdst);
 	}
@@ -772,8 +773,9 @@ ERR_STATUS ege::LZSS_Comp::decode(FILE * fsrc, FILE * fdst)
 	Ipp8u *buff_org = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ), *buff = buff_org;
 	Ipp8u *out_org = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ * 4), *out = out_org;
 
-	size_buff = COMP_BUFSIZ, size_out = COMP_BUFSIZ * 4;
-	if (size_buff = fread(buff, 1, COMP_BUFSIZ, fsrc)) {
+	size_out = COMP_BUFSIZ * 4;
+	size_buff = fread(buff, 1, COMP_BUFSIZ, fsrc);
+	if (size_buff) {
 		while (true) {
 			status = ippsDecodeLZSS_8u(&buff, &size_buff, &out, &size_out, this->context);
 			if (status == ippStsDstSizeLessExpected) {
@@ -787,7 +789,8 @@ ERR_STATUS ege::LZSS_Comp::decode(FILE * fsrc, FILE * fdst)
 				size_out = COMP_BUFSIZ * 4;
 				buff = buff_org;
 				out = out_org;
-				if (size_buff = fread(buff, 1, COMP_BUFSIZ, fsrc) <= 0)
+				size_buff = fread(buff, 1, COMP_BUFSIZ, fsrc);
+				if (!size_buff)
 					break;
 			}
 			else
@@ -814,15 +817,15 @@ ege::LZO_Comp::LZO_Comp(ege::COMPRESSION_METHOD id)
 	{
 	case ege::LZO_FAST:
 		ippsEncodeLZOGetSize(IppLZO1X1ST, 0, &ctxSize);
+		this->context = (IppLZOState_8u*)new Ipp8u[ctxSize];
+		ippsEncodeLZOInit_8u(IppLZO1X1ST, 0, this->context);
 		break;
 	case ege::LZO_SLOW:
 		ippsEncodeLZOGetSize(IppLZO1XST, 0, &ctxSize);
+		this->context = (IppLZOState_8u*)new Ipp8u[ctxSize];
+		ippsEncodeLZOInit_8u(IppLZO1X1ST, 0, this->context);
 		break;
-	default:
-		ippsEncodeLZOGetSize(IppLZO1X1ST, 0, &ctxSize);
 	}
-	
-	this->context = (IppLZOState_8u*)new Ipp8u[ctxSize];
 }
 
 ERR_STATUS ege::LZO_Comp::encode(char * pathSrc, char * pathDest)
@@ -872,11 +875,15 @@ ERR_STATUS ege::LZO_Comp::encode(FILE * fsrc, FILE * fdst)
 {
 	ERR_STATUS status = NO_ERROR;
 	Ipp32u size_buff, size_out;
+
+	if (!this->context)
+		return COMP_CLASS_BROKEN;
+
 	Ipp8u *buff = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ);
 	Ipp8u *out = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ + COMP_EXTEND);
 
 	size_buff = COMP_BUFSIZ, size_out = COMP_BUFSIZ + COMP_EXTEND;
-	while (size_buff = fread(buff, 1, COMP_BUFSIZ, fsrc) > 0) {
+	while (size_buff = fread(buff, 1, COMP_BUFSIZ, fsrc)) {
 		if (status = ippsEncodeLZO_8u(buff, size_buff, out, &size_out, this->context))
 			break;
 		fwrite(out, size_out, 1, fdst);
@@ -897,7 +904,9 @@ ERR_STATUS ege::LZO_Comp::decode(FILE * fsrc, FILE * fdst)
 	Ipp8u *out = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ * 4);
 
 	size_buff = COMP_BUFSIZ, size_out = COMP_BUFSIZ * 4;
-	if (size_buff = fread(buff, 1, COMP_BUFSIZ, fsrc) > 0) {
+
+	size_buff = fread(buff, 1, COMP_BUFSIZ, fsrc);
+	if (size_buff) {
 		while (true)
 		{
 			status = ippsDecodeLZOSafe_8u(buff, size_buff, out, &size_out);
@@ -908,7 +917,8 @@ ERR_STATUS ege::LZO_Comp::decode(FILE * fsrc, FILE * fdst)
 			else if (status == NO_ERROR) {
 				fwrite(out, size_out, 1, fdst);
 				size_out = COMP_BUFSIZ * 4;
-				if (size_buff = fread(buff, 1, COMP_BUFSIZ, fsrc) <= 0)
+				size_buff = fread(buff, 1, COMP_BUFSIZ, fsrc);
+				if (!size_buff)
 					break;
 			}
 			else
@@ -1013,8 +1023,9 @@ ERR_STATUS ege::LZ4_Comp::decode(FILE * fsrc, FILE * fdst)
 	Ipp8u *buff = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ);
 	Ipp8u *out = (Ipp8u*)malloc(sizeof(Ipp8u)*COMP_BUFSIZ * 4);
 
-	size_buff = COMP_BUFSIZ, size_out = COMP_BUFSIZ * 4;
-	if (size_buff = fread(buff, 1, COMP_BUFSIZ, fsrc) > 0) {
+	size_out = COMP_BUFSIZ * 4;
+	size_buff = fread(buff, 1, COMP_BUFSIZ, fsrc);
+	if (size_buff) {
 		while (true)
 		{
 			status = ippsDecodeLZ4_8u(buff, size_buff, out, &size_out);
@@ -1025,7 +1036,8 @@ ERR_STATUS ege::LZ4_Comp::decode(FILE * fsrc, FILE * fdst)
 			else if (status == NO_ERROR) {
 				fwrite(out, size_out, 1, fdst);
 				size_out = COMP_BUFSIZ * 4;
-				if (size_buff = fread(buff, 1, COMP_BUFSIZ, fsrc) <= 0)
+				size_buff = fread(buff, 1, COMP_BUFSIZ, fsrc);
+				if (!size_buff)
 					break;
 			}
 			else
