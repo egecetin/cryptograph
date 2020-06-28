@@ -5,6 +5,9 @@
 
 #include <QMainWindow>
 #include <QFileDialog>
+#include <QInputDialog>
+#include <QLineEdit>
+#include <QMessageBox>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -23,7 +26,7 @@ public:
 	Q_SLOT void compressionMethod(int id);
 	Q_SLOT void encryptionMethod(int id);
 	Q_SLOT void hashMethod(int id);
-	void convert();
+	Q_SLOT void convert();
 
 private:
     Ui::MainWindow *ui;

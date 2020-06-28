@@ -83,6 +83,19 @@
           <height>460</height>
          </rect>
         </property>
+        <widget class="QLabel" name="label_8">
+         <property name="geometry">
+          <rect>
+           <x>120</x>
+           <y>220</y>
+           <width>206</width>
+           <height>13</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Reserved for multiple file/directory support</string>
+         </property>
+        </widget>
        </widget>
       </widget>
      </item>
@@ -316,6 +329,9 @@
                  <height>16777215</height>
                 </size>
                </property>
+               <property name="currentIndex">
+                <number>3</number>
+               </property>
                <item>
                 <property name="text">
                  <string>SHA1</string>
@@ -478,6 +494,9 @@
              <property name="value">
               <number>0</number>
              </property>
+             <property name="textVisible">
+              <bool>false</bool>
+             </property>
             </widget>
            </item>
           </layout>
@@ -574,7 +593,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>636</x>
-     <y>463</y>
+     <y>443</y>
     </hint>
     <hint type="destinationlabel">
      <x>648</x>

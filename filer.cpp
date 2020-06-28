@@ -448,7 +448,7 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 			goto cleanup;
 		}
 
-		this->multiplier = 2;
+		this->multiplier = 1;
 		fwrite("0", sizeof(ege::fileProperties) + 8 + sizeof(size_t), 1, fdst);		// Write random memory
 		if (status = this->compress(fsrc, fdst))
 			goto cleanup;
@@ -461,7 +461,7 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 			goto cleanup;
 		}
 
-		this->multiplier = 2;
+		this->multiplier = 1;
 		fwrite("0", 1, sizeof(ege::fileProperties) + 8 + sizeof(size_t), fdst);		
 		if (status = this->encrypt(fsrc, fdst))
 			goto cleanup;
@@ -479,7 +479,7 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 			goto cleanup;
 		}
 
-		this->multiplier = 1;
+		this->multiplier = 0.5;
 
 		if (status = this->compress(fsrc, fdst))
 			goto cleanup;
@@ -536,7 +536,7 @@ ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 			goto cleanup;
 		}
 
-		this->multiplier = 2;
+		this->multiplier = 1;
 		fseek(fsrc, sizeof(ege::fileProperties) + 8 + sizeof(size_t), SEEK_CUR);		
 		if (status = this->decompress(fsrc, fdst))
 			goto cleanup;
@@ -549,7 +549,7 @@ ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 			goto cleanup;
 		}
 
-		this->multiplier = 2;
+		this->multiplier = 1;
 		fseek(fsrc, sizeof(ege::fileProperties) + 8 + sizeof(size_t), SEEK_CUR);		
 		if (status = this->decrypt(fsrc, fdst))
 			goto cleanup;
@@ -567,7 +567,7 @@ ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 			goto cleanup;
 		}
 
-		this->multiplier = 1;
+		this->multiplier = 0.5;
 		fseek(fsrc, sizeof(ege::fileProperties) + 8 + sizeof(size_t), SEEK_CUR);
 		if (status = this->decrypt(fsrc, fdst))
 			goto cleanup;
