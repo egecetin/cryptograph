@@ -14,7 +14,7 @@ This program has been developed only to share knowledge and experience. Please d
 
 ## General Info
 
-This project is developed for sharing knowledge and experience. General explanation of some cryptography methods can be found at [my Github site](https://egecetin.github.io/Projects/cryptography.html).
+This project is developed for sharing knowledge and experience. General explanation of some cryptography methods can be found at [my Github site](https://egecetin.github.io/Projects/crypto.html).
 
 Application is developed with following configuration
 
@@ -34,6 +34,7 @@ Application is developed with following configuration
   
 ## To Do
 
+* User Interface
 * Directory and Multiple File support with a container output file
 * Additional compressing algorithms
   - LZ4 High Compression
