@@ -11,6 +11,7 @@
 
 constexpr auto N_TRIAL = 10;
 constexpr auto MAX_TRIAL = 25;
+constexpr Ipp8u KNOWN_WORD[] = "The magic words are squeamish ossifrage";
 
 #define MAX_HASH_LEN	64
 
@@ -43,9 +44,9 @@ namespace ege {
 
 		// Functions
 		RSA_Crypt(const int bitsize, Ipp8u *private_key = nullptr, size_t privateSize = 0, Ipp8u *public_key = nullptr, size_t publicSize = 0);
-		ERR_STATUS setKey(int key_type, Ipp8u *key, int keySize);
-		ERR_STATUS encryptMessage(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphertext, Ipp8u *label = nullptr, int lenlabel = 0);
-		ERR_STATUS decryptMessage(Ipp8u *&ciphertext, Ipp8u *&msg, int &lenmsg, Ipp8u *label = nullptr, int lenlabel = 0);
+		ERR_STATUS setKey(int key_type, const Ipp8u *key, int keySize);
+		ERR_STATUS encryptMessage(const Ipp8u *msg, int lenmsg, Ipp8u *ciphertext, Ipp8u *label = nullptr, int lenlabel = 0);
+		ERR_STATUS decryptMessage(const Ipp8u *ciphertext, Ipp8u *msg, int &lenmsg, Ipp8u *label = nullptr, int lenlabel = 0);
 		ERR_STATUS getKey(int key_type, Ipp8u *key, int keysize);
 
 #ifdef _DEBUG
@@ -92,9 +93,9 @@ namespace ege {
 
 		// Functions
 		AES_Crypt(Ipp8u* pkey = nullptr);
-		inline ERR_STATUS setKey(Ipp8u* key);
-		ERR_STATUS encryptMessage(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphertext, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
-		ERR_STATUS decryptMessage(Ipp8u *&ciphertext, Ipp8u *&msg, int &lenmsg, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
+		inline ERR_STATUS setKey(const Ipp8u* key);
+		ERR_STATUS encryptMessage(const Ipp8u *msg, int lenmsg, Ipp8u *ciphertext, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
+		ERR_STATUS decryptMessage(const Ipp8u *ciphertext, Ipp8u *msg, int &lenmsg, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
 		~AES_Crypt();
 
 	private:
@@ -115,9 +116,9 @@ namespace ege {
 
 		// Functions
 		SMS4_Crypt(Ipp8u* pkey = nullptr);
-		ERR_STATUS setKey(Ipp8u* key);
-		ERR_STATUS encryptMessage(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphertext, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
-		ERR_STATUS decryptMessage(Ipp8u *&ciphertext, Ipp8u *&msg, int &lenmsg, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
+		ERR_STATUS setKey(const Ipp8u* key);
+		ERR_STATUS encryptMessage(const Ipp8u *msg, int lenmsg, Ipp8u *ciphertext, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
+		ERR_STATUS decryptMessage(const Ipp8u *ciphertext, Ipp8u *msg, int &lenmsg, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
 		~SMS4_Crypt();
 
 	private:

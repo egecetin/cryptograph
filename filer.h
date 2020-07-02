@@ -44,7 +44,7 @@ namespace ege {
 		char lastwrite[25];				// std::asctime has fixed 25 character
 		ege::COMPRESSION_METHOD compression;
 		int crypto_check;				// for compatibility
-#ifdef CRYPTOGRAPH_EGE
+#ifdef CRYPTOGRAPH_EGE		
 		ege::CRYPTO_METHOD crypto;
 		IppHashAlgId hashmethod;
 		Ipp8u hashcode[MAX_HASH_LEN];

@@ -199,7 +199,7 @@ ege::RSA_Crypt::RSA_Crypt(const int bitsize, Ipp8u *private_key, size_t privateS
 	}
 }
 
-ERR_STATUS ege::RSA_Crypt::setKey(int key_type, Ipp8u * key, int keySize)
+ERR_STATUS ege::RSA_Crypt::setKey(int key_type, const Ipp8u *key, int keySize)
 {
 	ERR_STATUS status = NO_ERROR;
 	std::string buffer;
@@ -405,12 +405,12 @@ ERR_STATUS ege::RSA_Crypt::saveKeys(const std::string filepath)
 
 }
 
-ERR_STATUS ege::RSA_Crypt::encryptMessage(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphertext, Ipp8u *label, int lenlabel)
+ERR_STATUS ege::RSA_Crypt::encryptMessage(const Ipp8u *msg, int lenmsg, Ipp8u *ciphertext, Ipp8u *label, int lenlabel)
 {
 	return ippsRSAEncrypt_OAEP(msg, lenmsg, label, lenlabel, (Ipp8u*)this->seed, ciphertext, this->publicKey, ippHashAlg_SHA512_256, this->buffer);
 }
 
-ERR_STATUS ege::RSA_Crypt::decryptMessage(Ipp8u *&ciphertext, Ipp8u *&msg, int &lenmsg, Ipp8u *label, int lenlabel)
+ERR_STATUS ege::RSA_Crypt::decryptMessage(const Ipp8u *ciphertext, Ipp8u *msg, int &lenmsg, Ipp8u *label, int lenlabel)
 {
 	return ippsRSADecrypt_OAEP(ciphertext, label, lenlabel, msg, &lenmsg, this->privateKey, ippHashAlg_SHA512_256, this->buffer);
 }
@@ -574,12 +574,12 @@ ege::AES_Crypt::AES_Crypt(Ipp8u* pkey)
 		throw runtime_error(ege::sterror(status, IPP_ID));
 }
 
-inline ERR_STATUS ege::AES_Crypt::setKey(Ipp8u * pkey)
+inline ERR_STATUS ege::AES_Crypt::setKey(const Ipp8u * pkey)
 {
 	return ippsAESSetKey(pkey, 256 / 8, this->key);
 }
 
-ERR_STATUS ege::AES_Crypt::encryptMessage(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphertext, Ipp8u *ctr, int ctrBitLen)
+ERR_STATUS ege::AES_Crypt::encryptMessage(const Ipp8u *msg, int lenmsg, Ipp8u *ciphertext, Ipp8u *ctr, int ctrBitLen)
 {
 	if (ctr == nullptr)
 		return ippsAESEncryptCTR(msg, ciphertext, lenmsg, this->key, this->ctr, 16 * 8);
@@ -587,7 +587,7 @@ ERR_STATUS ege::AES_Crypt::encryptMessage(Ipp8u *&msg, int lenmsg, Ipp8u *&ciphe
 		return ippsAESEncryptCTR(msg, ciphertext, lenmsg, this->key, ctr, ctrBitLen);
 }
 
-ERR_STATUS ege::AES_Crypt::decryptMessage(Ipp8u *&ciphertext, Ipp8u *&msg, int &lenmsg, Ipp8u *ctr, int ctrBitLen)
+ERR_STATUS ege::AES_Crypt::decryptMessage(const Ipp8u *ciphertext, Ipp8u *msg, int &lenmsg, Ipp8u *ctr, int ctrBitLen)
 {
 	if (ctr == nullptr)
 		return ippsAESDecryptCTR(ciphertext, msg, lenmsg, this->key, this->ctr, 16 * 8);
@@ -669,12 +669,12 @@ ege::SMS4_Crypt::SMS4_Crypt(Ipp8u * pkey)
 		throw runtime_error(ege::sterror(status, IPP_ID));
 }
 
-inline ERR_STATUS ege::SMS4_Crypt::setKey(Ipp8u * key)
+inline ERR_STATUS ege::SMS4_Crypt::setKey(const Ipp8u * key)
 {
 	return ippsSMS4SetKey(key, 256 / 8, this->key);
 }
 
-ERR_STATUS ege::SMS4_Crypt::encryptMessage(Ipp8u *& msg, int lenmsg, Ipp8u *& ciphertext, Ipp8u * ctr, int ctrBitLen)
+ERR_STATUS ege::SMS4_Crypt::encryptMessage(const Ipp8u *msg, int lenmsg, Ipp8u *ciphertext, Ipp8u * ctr, int ctrBitLen)
 {
 	if (ctr == nullptr)
 		return ippsSMS4EncryptCTR(msg, ciphertext, lenmsg, this->key, this->ctr, 16 * 8);
@@ -682,7 +682,7 @@ ERR_STATUS ege::SMS4_Crypt::encryptMessage(Ipp8u *& msg, int lenmsg, Ipp8u *& ci
 		return ippsSMS4EncryptCTR(msg, ciphertext, lenmsg, this->key, ctr, ctrBitLen);
 }
 
-ERR_STATUS ege::SMS4_Crypt::decryptMessage(Ipp8u *& ciphertext, Ipp8u *& msg, int & lenmsg, Ipp8u * ctr, int ctrBitLen)
+ERR_STATUS ege::SMS4_Crypt::decryptMessage(const Ipp8u *ciphertext, Ipp8u *msg, int & lenmsg, Ipp8u * ctr, int ctrBitLen)
 {
 	if (ctr == nullptr)
 		return ippsSMS4DecryptCTR(ciphertext, msg, lenmsg, this->key, this->ctr, 16 * 8);

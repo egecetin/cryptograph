@@ -39,23 +39,29 @@ void MainWindow::convert()
 	ERR_STATUS status = NO_ERROR;
 	
 	// Check files
+	if (!(this->pathDest.length() && this->pathSrc.length())) {
+		QMessageBox::critical(this, tr("Error"), tr("Please select the source and destination paths."));
+		return;
+	}
 
 	// Ask for password
 	bool flag = false;
 	while (!flag)
 	{
-		QString text = QInputDialog::getText(this, tr("QInputDialog::getText()"), tr("Password:"), QLineEdit::Password, QString(), &flag);
-		if (text.isEmpty()) {
+		QString text = QInputDialog::getText(this, QString(), tr("Password:"), QLineEdit::Password, QString(), &flag);
+		if (text.isEmpty() && flag) {
 			QMessageBox::critical(this, tr("Error"), tr("Password can't be empty!"));
 			flag = false;
 		}			
 		else if (text.length() > 32) {
 			QMessageBox::critical(this, tr("Error"), tr("Password can't be longer than 32 character"));
 			flag = false;
-		}			
+		}
+		else {
+			flag = true;
+			return;
+		}	
 	}
-	
-	// Check password
 
 	// pack/unpack
 

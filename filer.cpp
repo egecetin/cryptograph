@@ -282,6 +282,10 @@ ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest)
 	case ege::CRYPTO_METHOD::AES:
 	{
 		AES_Crypt cryptograph(this->key);
+		if (status = cryptograph.encryptMessage(KNOWN_WORD, 40, cipher))
+			return status;
+		fwrite(cipher, 40, 1, Dest);
+
 		while (size = fread(buff, 1, BUFFER_SIZE, Src)) {
 			if (status = cryptograph.encryptMessage(buff, size, cipher))
 				break;
@@ -294,6 +298,10 @@ ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest)
 	case ege::CRYPTO_METHOD::SMS4:
 	{
 		SMS4_Crypt cryptograph(this->key);
+		if (status = cryptograph.encryptMessage(KNOWN_WORD, 40, cipher))
+			return status;
+		fwrite(cipher, 40, 1, Dest);
+
 		while (size = fread(buff, 1, BUFFER_SIZE, Src)) {
 			if (status = cryptograph.encryptMessage(buff, size, cipher))
 				break;
@@ -334,6 +342,12 @@ ERR_STATUS ege::Filer::decrypt(FILE* Src, FILE* Dest)
 	case ege::CRYPTO_METHOD::AES:
 	{
 		AES_Crypt cryptograph(this->key);
+		size = fread(cipher, 1, 40, Src);
+		if (status = cryptograph.decryptMessage(cipher, buff, size))
+			return status;
+		if (strcmp((char*)buff, (char*)KNOWN_WORD))
+			return CRYPT_PASSWORD_ERROR;
+
 		while (size = fread(cipher, 1, BUFFER_SIZE, Src)) {
 			if (status = hasher.update(cipher, size))
 				break;
@@ -346,6 +360,12 @@ ERR_STATUS ege::Filer::decrypt(FILE* Src, FILE* Dest)
 	case ege::CRYPTO_METHOD::SMS4:
 	{
 		SMS4_Crypt cryptograph(this->key);
+		size = fread(cipher, 1, 40, Src);
+		if (status = cryptograph.decryptMessage(cipher, buff, size))
+			return status;
+		if (strcmp((char*)buff, (char*)KNOWN_WORD))
+			return CRYPT_PASSWORD_ERROR;
+
 		while (size = fread(cipher, 1, BUFFER_SIZE, Src)) {
 			if (status = hasher.update(cipher, size))
 				break;
@@ -617,7 +637,10 @@ ege::COMPRESSION_METHOD ege::Filer::getCompressionType(char * type)
 #ifdef CRYPTOGRAPH_EGE
 void ege::Filer::setKey(Ipp8u * key, size_t keylen)
 {
-	this->key = (Ipp8u*)malloc(sizeof(Ipp8u)*keylen);
+	if (!this->key)
+		this->key = (Ipp8u*)malloc(sizeof(Ipp8u) * 256 / 8);
+	for (size_t i = 0; i < 256 / 8; ++i)
+		this->key[i] = 0;
 	memcpy(this->key, key, sizeof(Ipp8u)*keylen);
 	this->keylen = keylen;
 }
