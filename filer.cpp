@@ -386,7 +386,8 @@ ERR_STATUS ege::Filer::decrypt(FILE* Src, FILE* Dest)
 	if (!status) {
 		status = hasher.getHash(buff);
 		if (!status) {
-			if (memcmp(buff, this->context.hashcode, 64))
+			qDebug() << strlen((char*)this->context.hashcode);
+			if (memcmp(buff, this->context.hashcode, strlen((char*)this->context.hashcode)) - 1)
 				return HASH_CHECK_FAIL;
 		}
 	}

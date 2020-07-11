@@ -43,12 +43,22 @@ void MainWindow::convert()
 		QMessageBox::critical(this, tr("Error"), tr("Please select the source and destination paths."));
 		return;
 	}
+	if (this->crypt == ege::CRYPTO_METHOD::RSA || this->crypt == ege::CRYPTO_METHOD::ECCP) {
+		QMessageBox::critical(this, tr(""), tr("RSA and ECCP encryption methods are not implemented yet"));
+		return;
+	}
+	if (this->comp == ege::COMPRESSION_METHOD::ZLIB_FAST || this->comp == ege::COMPRESSION_METHOD::ZLIB_AVERAGE
+		|| this->comp == ege::COMPRESSION_METHOD::ZLIB_SLOW || this->comp == ege::COMPRESSION_METHOD::LZ4_HC) {
+		QMessageBox::critical(this, tr(""), tr("ZLIB and LZ4 High Compression methods are not implemented yet"));
+		return;
+	}
 
 	// Ask for password
+	QString text; 
 	bool flag = false;
 	while (!flag)
 	{
-		QString text = QInputDialog::getText(this, QString(), tr("Password:"), QLineEdit::Password, QString(), &flag);
+		text = QInputDialog::getText(this, QString(), tr("Password:"), QLineEdit::Password, QString(), &flag);
 		if (text.isEmpty() && flag) {
 			QMessageBox::critical(this, tr("Error"), tr("Password can't be empty!"));
 			flag = false;
@@ -59,12 +69,56 @@ void MainWindow::convert()
 		}
 		else {
 			flag = true;
-			return;
 		}	
 	}
 
 	// pack/unpack
+	status = processFile(text);
 
+	if (!status) {
+		ui->label->setText("");
+		ui->label_2->setText("");
+		this->pathDest.clear();
+		this->pathSrc.clear();
+	}
+	else
+		QMessageBox::critical(this, tr("Error"), ege::sterror(status, IPP_ID));
+
+}
+
+ERR_STATUS MainWindow::processFile(QString &password)
+{
+	ERR_STATUS status = NO_ERROR;
+	ege::Filer handler;
+	std::experimental::filesystem::path src(this->pathSrc); qDebug() << src.extension().string().c_str();
+
+	if (std::experimental::filesystem::is_directory(src)) { // If it is a directory this is a packing
+		// Reserved
+	}
+	else if (strcmp(src.extension().string().c_str(), ".ege")) { // If extension not "ege" this is a packing
+		handler.setKey((Ipp8u*)password.toStdString().data(), password.length());
+		
+		status = handler.setPath(this->pathSrc.data());
+		if (status)
+			return status;
+
+		handler.setCompressionType(this->comp);
+		handler.setEncryptionMethod(this->crypt);
+		handler.setHashMethod(this->hash);
+
+		status = handler.pack(this->pathDest.data(), true);
+		if (status)
+			return status;
+	}
+	else { // This is an unpacking
+		status = handler.setPath(this->pathSrc.data());
+		if (status)
+			return status;
+		handler.setKey((Ipp8u*)password.toStdString().data(), password.length());
+		status = handler.unpack(this->pathDest.data(), true);
+		if (status)
+			return status;
+	}
 }
 
 MainWindow::~MainWindow()
@@ -87,7 +141,7 @@ void MainWindow::setPath(int id)
 	}
 	case 2:
 	{
-		fileName = QFileDialog::getSaveFileName(this, tr("Select save location"), this->pathSrc.c_str(), tr("Encrypted file (*.ege)"));
+		fileName = QFileDialog::getSaveFileName(this, tr("Select save location"), this->pathSrc.c_str());
 		ui->label->setText(fileName);
 		this->pathDest = fileName.toStdString();
 		break;

@@ -19,6 +19,7 @@ class MainWindow : public QMainWindow
 		
 public:
     MainWindow(QWidget *parent = nullptr);
+	ERR_STATUS processFile(QString &password);
     ~MainWindow();
 
 	Q_SLOT void srcPathClicked();
