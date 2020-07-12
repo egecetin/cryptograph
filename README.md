@@ -34,7 +34,6 @@ Application is developed with following configuration
   
 ## To Do
 
-* User Interface
 * Directory and Multiple File support with a container output file
 * Additional compressing algorithms
   - LZ4 High Compression
