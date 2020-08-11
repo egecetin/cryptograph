@@ -1,5 +1,7 @@
 # Cryptograph - An example of cryptography
  
+ [![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fegecetin%2Fcryptograph)](https://hits.seeyoufarm.com)
+ 
  A cryptography example using Intel Integrated Performance Primitives (IPP) library.
 
 ## &#x1F53B;&#x1F53B;Important Notice!&#x1F53B;&#x1F53B;
