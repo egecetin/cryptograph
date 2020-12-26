@@ -2,6 +2,7 @@
 
 #include "logger.h"
 #include "ippcp_bignumber.h"
+
 #include <ippcp.h>
 #include <string>
 

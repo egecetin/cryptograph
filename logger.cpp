@@ -5,7 +5,7 @@ namespace ege {
 	inline const char* currentDateTime() {
 		time_t     now = time(0);
 		struct tm  tstruct;
-		char*      buf = (char*)malloc(80);
+		static char buf[80];
 		localtime_s(&tstruct, &now);
 		strftime(buf, sizeof(buf), "%Y-%m-%d_%H%M%S", &tstruct);
 

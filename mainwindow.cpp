@@ -43,10 +43,6 @@ void MainWindow::convert()
 		QMessageBox::critical(this, tr("Error"), tr("Please select the source and destination paths."));
 		return;
 	}
-	if (this->crypt == ege::CRYPTO_METHOD::RSA || this->crypt == ege::CRYPTO_METHOD::ECCP) {
-		QMessageBox::critical(this, tr(""), tr("RSA and ECCP encryption methods are not implemented yet"));
-		return;
-	}
 	if (this->comp == ege::COMPRESSION_METHOD::ZLIB_FAST || this->comp == ege::COMPRESSION_METHOD::ZLIB_AVERAGE
 		|| this->comp == ege::COMPRESSION_METHOD::ZLIB_SLOW || this->comp == ege::COMPRESSION_METHOD::LZ4_HC) {
 		QMessageBox::critical(this, tr(""), tr("ZLIB and LZ4 High Compression methods are not implemented yet"));

@@ -137,20 +137,14 @@ ERR_STATUS ege::Filer::decompress(FILE* Src, FILE* Dest)
 void ege::Filer::prepareHeader()
 {
 	std::experimental::filesystem::path path = this->path;
-
 	this->context.size = this->readSize(this->path);
 	strcpy(this->context.filename, path.filename().string().c_str());
 	strcpy(this->context.extension, path.extension().string().c_str());
 	strcpy(this->context.lastwrite, this->readLastWrite(this->path));
 	this->context.compression = this->getCompressionType();
-#ifdef CRYPTOGRAPH_EGE	
 	this->context.crypto = this->getEncryptionMethod();
 	this->context.crypto == ege::CRYPTO_METHOD::NO_ENCRYPT ? this->context.crypto_check = 0 : this->context.crypto_check = 1;
 	this->context.hashmethod = this->getHashMethod();
-#else
-	this->context.crypto_check = 0;
-#endif // CRYPTOGRAPH_EGE
-
 }
 
 ERR_STATUS ege::Filer::readHeader(char * pathSrc)
@@ -225,56 +219,6 @@ void ege::Filer::configFromHeader()
 #endif // CRYPTOGRAPH_EGE
 }
 
-#ifdef CRYPTOGRAPH_EGE
-const char * ege::Filer::strhashtype(IppHashAlgId id)
-{
-	switch (id)
-	{
-	case ippHashAlg_Unknown:
-		return "Unknown hash code.";
-	case ippHashAlg_SHA1:
-		return "SHA-1";
-	case ippHashAlg_SHA256:
-		return "SHA-256";
-	case ippHashAlg_SHA224:
-		return "SHA-224";
-	case ippHashAlg_SHA512:
-		return "SHA-512";
-	case ippHashAlg_SHA384:
-		return "SHA-384";
-	case ippHashAlg_MD5:
-		return "MD5";
-	case ippHashAlg_SM3:
-		return "SM3";
-	case ippHashAlg_SHA512_224:
-		return "SHA-512/224";
-	case ippHashAlg_SHA512_256:
-		return "SHA-512/256";
-	default:
-		return "Unknown hash code.";
-	}
-}
-
-const char * ege::Filer::strcrypttype(ege::CRYPTO_METHOD id)
-{
-	// Always return 5 character ('CODE' + '\0')
-	switch (id)
-	{
-	case ege::CRYPTO_METHOD::NO_ENCRYPT:
-		return "    ";
-	case ege::CRYPTO_METHOD::AES:
-		return " AES";
-	case ege::CRYPTO_METHOD::SMS4:
-		return "SMS4";
-	case ege::CRYPTO_METHOD::RSA:
-		return " RSA";
-	case ege::CRYPTO_METHOD::ECCP:
-		return "ECCP";
-	default:
-		return "----";
-	}
-}
-
 ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest)
 {
 	size_t size;
@@ -317,10 +261,6 @@ ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest)
 		}
 		break;
 	}
-	case ege::CRYPTO_METHOD::RSA:
-		// Reserved
-	case ege::CRYPTO_METHOD::ECCP:
-		// Reserved
 	default:
 		status = CRYPT_UNKNOWN_METHOD;
 	}
@@ -382,10 +322,6 @@ ERR_STATUS ege::Filer::decrypt(FILE* Src, FILE* Dest)
 		}
 		break;
 	}
-	case ege::CRYPTO_METHOD::RSA:
-		// Reserved
-	case ege::CRYPTO_METHOD::ECCP:
-		// Reserved
 	default:
 		status = CRYPT_UNKNOWN_METHOD;
 	}
@@ -405,7 +341,6 @@ ERR_STATUS ege::Filer::decrypt(FILE* Src, FILE* Dest)
 
 	return status;
 }
-#endif
 
 /** ##############################################################################################################
 	Constructor

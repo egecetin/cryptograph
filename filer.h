@@ -10,7 +10,8 @@
 
 #define BUFFER_SIZE	 65536	//  64 kB
 #define COMP_BUFSIZ	131072	// 128 kB
-#define COMP_EXTEND	   512	// 0.5 kB
+#define COMP_EXTEND	  1024	//   1 kB
+#define DESCRIPTOR_LENGTH 628  
 
 namespace ege {
 
@@ -37,7 +38,7 @@ namespace ege {
 		char lastwrite[25];				// std::asctime has fixed 25 character
 		uint8_t compression;			// Type of compression
 		uint8_t crypto;					// Crypto type
-		IppHashAlgId hashmethod;		// Hash method
+		uint8_t hashmethod;				// Hash method
 		Ipp8u hashcode[MAX_HASH_LEN];	// Hash code
 	};
 
@@ -45,7 +46,7 @@ namespace ege {
 	{
 	public:
 		// ########### Variables ########### //
-		double progress = 0; // Between 0 - 100
+		volatile double progress = 0; // Between 0 - 100
 
 		// ########### Functions ########### //
 		Filer(std::string pathSrc = std::string());
@@ -72,7 +73,6 @@ namespace ege {
 
 	private:
 		// ########### Variables ########### //
-		double multiplier = 1;						// Variable for calculating progress
 		std::string srcDir;							// Directory for processing
 		std::string tempDir;						// Directory for temporarily use
 		uint32_t nFiles = 0;						// Number of files given at path

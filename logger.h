@@ -5,8 +5,6 @@
 #include <iostream>
 #include <fstream>
 
-#include <QDebug>
-
 typedef int ERR_STATUS;
 
 /* Error Classifiers*/

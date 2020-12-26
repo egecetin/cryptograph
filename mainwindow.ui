@@ -419,16 +419,6 @@
                  <string>SMS4</string>
                 </property>
                </item>
-               <item>
-                <property name="text">
-                 <string>RSA</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>ECCP</string>
-                </property>
-               </item>
               </widget>
              </item>
             </layout>
