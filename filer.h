@@ -13,10 +13,8 @@
 #define COMP_EXTEND	   512	// 0.5 kB
 
 namespace ege {
-	/*******************************************************************************************/
-	/*************************************** Definitions ***************************************/
-	/*******************************************************************************************/
-	
+
+	// #################################### Definitions #################################### //	
 	enum COMPRESSION_METHOD
 	{
 		NO_COMPRESS,
@@ -30,11 +28,6 @@ namespace ege {
 		LZ4_HC			// High-compression mode (Reserved)
 	};
 	
-	/*******************************************************************************************/
-	/****************************************** Class ******************************************/
-	/*******************************************************************************************/
-	
-	/*************************************** File Header ***************************************/
 	struct fileProperties
 	{
 		uint64_t size;					// Original file size
@@ -48,7 +41,6 @@ namespace ege {
 		Ipp8u hashcode[MAX_HASH_LEN];	// Hash code
 	};
 
-	/*************************************** FileHandler ***************************************/
 	class Filer
 	{
 	public:
@@ -57,30 +49,32 @@ namespace ege {
 
 		// ########### Functions ########### //
 		Filer(std::string pathSrc = std::string());
-		Filer(const char* pathSrc = nullptr);
 		
-		ERR_STATUS setPath(char* pathSrc);
+		ERR_STATUS setPath(std::string pathSrc);
+		ERR_STATUS setTempPath(std::string pathTemp);
 		ERR_STATUS pack(char* pathDest = nullptr, bool overwrite = false);
 		ERR_STATUS unpack(char* pathDest = nullptr, bool overwrite = false);
 
 		// Compression functions
 		void setCompressionType(ege::COMPRESSION_METHOD id);
-		ege::COMPRESSION_METHOD getCompressionType(char* type = nullptr);
+		ege::COMPRESSION_METHOD getCompressionType();
 		
 		// Encryption functions
 		void setKey(Ipp8u* key, size_t keylen);
 		void setEncryptionMethod(ege::CRYPTO_METHOD id);
-		ege::CRYPTO_METHOD getEncryptionMethod(char* type = nullptr);
+		ege::CRYPTO_METHOD getEncryptionMethod();
 		
 		// Hash functions
 		void setHashMethod(IppHashAlgId id);
+		IppHashAlgId ege::Filer::getHashMethod();
 
 		~Filer();
 
 	private:
 		// ########### Variables ########### //
 		double multiplier = 1;						// Variable for calculating progress
-		std::string path = nullptr;					// Directory for processing
+		std::string srcDir;							// Directory for processing
+		std::string tempDir;						// Directory for temporarily use
 		uint32_t nFiles = 0;						// Number of files given at path
 		std::vector<ege::fileProperties> context;	// Identifiers of files
 
@@ -92,8 +86,8 @@ namespace ege {
 		ege::COMPRESSION_METHOD compression_type = ege::COMPRESSION_METHOD::NO_COMPRESS; // Type of requested compression		
 
 		// ########### Functions ########### //
-		ERR_STATUS moveFile(const char* pathDest, const char* pathSrc, bool overwrite = false);
-		ERR_STATUS copyFile(char* pathDest, const char* pathSrc, bool overwrite = false);
+		ERR_STATUS moveFile(std::string pathSrc, std::string pathDest, bool overwrite = false);
+		ERR_STATUS copyFile(std::string pathSrc, std::string pathDest, bool overwrite = false, bool removeSrc = false);
 		ERR_STATUS compress(FILE* Src, FILE* Dest);
 		ERR_STATUS decompress(FILE* Src, FILE* Dest);
 		ERR_STATUS encrypt(FILE* Src, FILE* Dest);
@@ -106,13 +100,12 @@ namespace ege {
 		void configFromHeader();
 
 		// Helper
-		inline bool checkfile(const char* file);
+		inline bool checkfile(std::string file);
 		int64_t readSize(const char* file);
 		char* readLastWrite(const char* file);
 	
 	};
 
-	/******************************************* LZSS ******************************************/
 	class LZSS_Comp
 	{
 	public:
@@ -127,7 +120,6 @@ namespace ege {
 		IppLZSSState_8u *context = nullptr;
 	};
 
-	/******************************************* LZO *******************************************/
 	class LZO_Comp 
 	{
 	public:
@@ -143,7 +135,6 @@ namespace ege {
 
 	};
 
-	/******************************************* LZ4 *******************************************/
 	class LZ4_Comp
 	{
 	public:
@@ -158,9 +149,5 @@ namespace ege {
 		Ipp8u* hashTable = nullptr;
 		Ipp8u* dict = nullptr; // Reserved
 	};
-
-	/*******************************************************************************************/
-	/**************************************** Functions ****************************************/
-	/*******************************************************************************************/
 
 }

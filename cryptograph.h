@@ -22,7 +22,6 @@ namespace ege {
 		CRYPTO_METHOD_MAX
 	};
 
-	// #################################### Class #################################### //
 	class AES_Crypt // Only 256 bit
 	{
 	public:

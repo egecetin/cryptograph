@@ -7,7 +7,7 @@
 	Output;
 		retval	: True if exists, false otherwise
 */
-inline bool ege::Filer::checkfile(const char * file)
+inline bool ege::Filer::checkfile(std::string file)
 {
 	return std::experimental::filesystem::exists(file);
 }
@@ -36,26 +36,6 @@ char * ege::Filer::readLastWrite(const char* file)
 int64_t ege::Filer::readSize(const char* file)
 {
 	return std::experimental::filesystem::file_size(file);
-}
-
-/** ##############################################################################################################
-	Returns compression type sentence
-	Input;
-		id		: Compression type
-	Output;
-		retval	: Compression type in string format
-*/
-const char * ege::Filer::strcomptype(ege::COMPRESSION_METHOD id)
-{
-	switch (id)
-	{
-	case ege::COMPRESSION_METHOD::NO_COMPRESS:
-		return "No compression";
-	case ege::COMPRESSION_METHOD::LZ4:
-		return "LZ4";
-	default:
-		return "Unknown compression code.";
-	}
 }
 
 /** ##############################################################################################################
@@ -153,35 +133,6 @@ ERR_STATUS ege::Filer::decompress(FILE* Src, FILE* Dest)
 		return COMP_UNKNOWN_METHOD;
 	}
 }
-
-/** ##############################################################################################################
-	Copy file
-	Input;
-		Src		: Path of file which will be copied
-		Dest	: Path to copy file
-	Output;
-		retval	: Returns 0 on success
-*/
-ERR_STATUS ege::Filer::copy(char * pathSrc, char * pathDest)
-{
-	size_t size;
-	char buf[BUFFER_SIZE];
-
-	FILE *src = fopen(pathSrc, "rb");
-	FILE *dest = fopen(pathDest, "wb");
-	if (!(src && dest))
-		return FILE_INPUT_OUTPUT_ERR;
-
-	while (size = fread(buf, 1, BUFFER_SIZE, src)) {
-		fwrite(buf, size, 1, dest);
-	}
-
-	fclose(src);
-	fclose(dest);
-
-	return NO_ERROR;
-}
-
 
 void ege::Filer::prepareHeader()
 {
@@ -456,51 +407,94 @@ ERR_STATUS ege::Filer::decrypt(FILE* Src, FILE* Dest)
 }
 #endif
 
-ege::Filer::Filer(char * pathSrc)
+/** ##############################################################################################################
+	Constructor
+*/
+ege::Filer::Filer(std::string pathSrc)
 {
-	if (pathSrc) {
-		this->path = (char*)malloc(sizeof(char)*FILENAME_MAX);
-		this->setPath(pathSrc);
-	}
+	this->srcDir = pathSrc;
 }
 
-ERR_STATUS ege::Filer::setPath(char * pathSrc)
+/** ##############################################################################################################
+	Set path of class
+	Input;
+		pathSrc	: Path to process files
+	Output;
+		retval	: Returns 0 on success
+*/
+ERR_STATUS ege::Filer::setPath(std::string pathSrc)
 {
-	if (!this->path)
-		this->path = new char[FILENAME_MAX];
-	if (strlen(pathSrc) < FILENAME_MAX && pathSrc) {
-		if (this->checkfile(pathSrc)) {
-			strcpy(this->path, pathSrc);
-			return NO_ERROR;
-		}
-		else
-			return FILE_NOT_EXIST;
+	if (this->checkfile(pathSrc)) {
+		this->srcDir = pathSrc;
+		return NO_ERROR;
 	}
-	else if (pathSrc)
-		return OVER_FILENAME_LIMIT;
 	else
-		return FILE_NOT_SET;
+		return FILE_NOT_EXIST;
 }
 
-ERR_STATUS ege::Filer::moveFile(char * pathDest, bool overwrite)
+/** ##############################################################################################################
+	Move a file
+	Input;
+		pathSrc		: Path of file which will be copied
+		pathDest	: Path to copy file
+		overwrite	: If it is true destination file will be overwrited
+	Output;
+		retval	: Returns 0 on success
+*/
+ERR_STATUS ege::Filer::moveFile(std::string pathSrc, std::string pathDest, bool overwrite = false)
 {
-	if (this->path)
+	if (this->path.empty())
 		return FILE_NOT_SET;
 	if (!overwrite && this->checkfile(pathDest))
 		return FILE_ALREADY_EXIST;
-	this->path[0] == pathDest[0] ? rename(this->path, pathDest) : this->copy(this->path, pathDest);
+	this->path[0] == pathDest[0] ? 
+		rename(this->path.c_str(), pathDest.c_str()) : this->copyFile(this->path, pathDest, overwrite, true);
 	
 	return NO_ERROR;
 }
 
-ERR_STATUS ege::Filer::copyFile(char * pathDest, bool overwrite)
+/** ##############################################################################################################
+	Copy a file
+	Input;
+		pathSrc		: Path of file which will be copied
+		pathDest	: Path to copy file
+		overwrite	: If it is true destination file will be overwrited
+		removeSrc	: If it is true source file will be removed after copy operation
+	Output;
+		retval	: Returns 0 on success
+*/
+ERR_STATUS ege::Filer::copyFile(std::string pathSrc, std::string pathDest, bool overwrite = false, bool removeSrc = false)
 {
-	if (this->path == nullptr)
-		return FILE_NOT_SET;
+	// Check existance
 	if (!overwrite && this->checkfile(pathDest))
 		return FILE_ALREADY_EXIST;
+	
+	size_t size;
+	char buf[BUFFER_SIZE];
 
-	return this->copy(this->path, pathDest);
+	// Open files
+	FILE *src = fopen(pathSrc.c_str(), "rb");
+	FILE *dest = fopen(pathDest.c_str(), "wb");
+	if (!(src && dest)) {
+		fclose(src);
+		fclose(dest);
+		return FILE_INPUT_OUTPUT_ERR;
+	}
+
+	// Copy
+	while (size = fread(buf, 1, BUFFER_SIZE, src)) {
+		fwrite(buf, size, 1, dest);
+	}
+
+	// Close files
+	fclose(src);
+	fclose(dest);
+
+	// Remove src file is requested
+	if (removeSrc)
+		std::experimental::filesystem::remove(pathSrc);
+
+	return NO_ERROR;
 }
 
 ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
@@ -672,76 +666,98 @@ cleanup:
 	return status;
 }
 
-char* ege::Filer::getPath()
-{
-	char *path = (char*)malloc(FILENAME_MAX);
-	strcpy(path, this->path);
-	return path;
-}
-
+/** ##############################################################################################################
+	Sets the compression type
+	Input;
+		id	: Compression type
+	Output;
+*/
 void ege::Filer::setCompressionType(ege::COMPRESSION_METHOD id)
 {
 	this->compression_type = id;
 }
 
-ege::COMPRESSION_METHOD ege::Filer::getCompressionType(char * type)
+/** ##############################################################################################################
+	Returns the compression type
+	Input;
+	Output;
+		retval	: Compression type
+*/
+ege::COMPRESSION_METHOD ege::Filer::getCompressionType()
 {
-	if (type)
-		strcpy(type, this->strcomptype(this->compression_type));
 	return this->compression_type;
 }
 
-#ifdef CRYPTOGRAPH_EGE
+/** ##############################################################################################################
+	Sets the encryption key
+	Input;
+		key		: Pointer to a symmetric key
+		keylen	: Length of key in bits
+	Output;
+*/
 void ege::Filer::setKey(Ipp8u * key, size_t keylen)
 {
 	if (!this->key)
-		this->key = (Ipp8u*)malloc(sizeof(Ipp8u) * 256 / 8);
-	for (size_t i = 0; i < 256 / 8; ++i)
+		this->key = (Ipp8u*)malloc(sizeof(Ipp8u) * keylen / 8);
+	else
+		this->key = (Ipp8u*)realloc(this->key, keylen / 8);
+	for (size_t i = 0; i < keylen / 8; ++i)
 		this->key[i] = 0;
 	memcpy(this->key, key, sizeof(Ipp8u)*keylen);
-	this->keylen = keylen;
+	this->keyLen = keylen;
 }
 
-Ipp8u * ege::Filer::getKey(size_t *keylen)
-{
-	Ipp8u* buff = (Ipp8u*)malloc(sizeof(Ipp8u)*this->keylen);
-	memcpy(buff, this->key, sizeof(Ipp8u)*this->keylen);
-	if (keylen != nullptr)
-		*keylen = this->keylen;
-	return buff;
-}
-
+/** ##############################################################################################################
+	Sets the encryption method
+	Input;
+		id	: Encryption type
+	Output;
+*/
 void ege::Filer::setEncryptionMethod(ege::CRYPTO_METHOD id)
 {
 	this->crypto_type = id;
 }
 
-ege::CRYPTO_METHOD ege::Filer::getEncryptionMethod(char * type)
+/** ##############################################################################################################
+	Returns the encryption method
+	Input;
+	Output;
+		retval	: Encryption type
+*/
+ege::CRYPTO_METHOD ege::Filer::getEncryptionMethod()
 {
-	if (type)
-		strcpy(type, this->strcrypttype(this->crypto_type));
 	return this->crypto_type;
 }
 
+/** ##############################################################################################################
+	Sets the hash method
+	Input;
+		id	: Hash method
+	Output;
+*/
 void ege::Filer::setHashMethod(IppHashAlgId id)
 {
 	this->hash_type = id;
 }
 
-IppHashAlgId ege::Filer::getHashMethod(char * type)
+/** ##############################################################################################################
+	Returns the hash method
+	Input;
+	Output;
+		retval	: Hash method
+*/
+IppHashAlgId ege::Filer::getHashMethod()
 {
-	if (type)
-		strcpy(type, this->strhashtype(this->hash_type));
 	return this->hash_type;
 }
-#endif
 
+/** ##############################################################################################################
+	Deconstructor
+*/
 ege::Filer::~Filer()
 {
-	free(this->path);
-#ifdef CRYPTOGRAPH_EGE
+	memset(this->key, 0, this->keyLen);
 	free(this->key);
-#endif
 }
 
 ege::LZSS_Comp::LZSS_Comp()
