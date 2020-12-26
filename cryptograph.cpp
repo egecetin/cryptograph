@@ -1,6 +1,6 @@
 #include "cryptograph.h"
 
-ege::AES_Crypt::AES_Crypt(Ipp8u* pkey, size_t keyLen)
+ege::AES_Crypt::AES_Crypt(Ipp8u *pkey, size_t keyLen)
 {
 	ERR_STATUS status = NO_ERROR;
 	int ctxSize = 0;
@@ -24,7 +24,7 @@ ege::AES_Crypt::AES_Crypt(Ipp8u* pkey, size_t keyLen)
 	this->keyLen = keyLen;
 }
 
-ERR_STATUS ege::AES_Crypt::setKey(const Ipp8u * pkey, size_t keyLen)
+ERR_STATUS ege::AES_Crypt::setKey(const Ipp8u *pkey, size_t keyLen)
 {
 	ERR_STATUS status;
 	status = ippsAESSetKey(pkey, keyLen / 8, this->key);
@@ -75,7 +75,7 @@ inline Ipp8u* ege::AES_Crypt::rand8(int size)
 	return pX;
 }
 
-ege::SMS4_Crypt::SMS4_Crypt(Ipp8u * pkey, size_t keyLen)
+ege::SMS4_Crypt::SMS4_Crypt(Ipp8u *pkey, size_t keyLen)
 {
 	ERR_STATUS status = NO_ERROR;
 	int ctxSize = 0;
@@ -98,12 +98,12 @@ ege::SMS4_Crypt::SMS4_Crypt(Ipp8u * pkey, size_t keyLen)
 	this->keyLen = keyLen;
 }
 
-ERR_STATUS ege::SMS4_Crypt::setKey(const Ipp8u * key, size_t keyLen)
+ERR_STATUS ege::SMS4_Crypt::setKey(const Ipp8u *key, size_t keyLen)
 {
 	return ippsSMS4SetKey(key, keyLen / 8, this->key);
 }
 
-ERR_STATUS ege::SMS4_Crypt::encryptMessage(const Ipp8u *msg, int lenmsg, Ipp8u *ciphertext, Ipp8u * ctr, int ctrBitLen)
+ERR_STATUS ege::SMS4_Crypt::encryptMessage(const Ipp8u *msg, int lenmsg, Ipp8u *ciphertext, Ipp8u *ctr, int ctrBitLen)
 {
 	if (ctr == nullptr)
 		return ippsSMS4EncryptCTR(msg, ciphertext, lenmsg, this->key, this->ctr, SMS4_CTR_SIZE * 8);
@@ -111,7 +111,7 @@ ERR_STATUS ege::SMS4_Crypt::encryptMessage(const Ipp8u *msg, int lenmsg, Ipp8u *
 		return ippsSMS4EncryptCTR(msg, ciphertext, lenmsg, this->key, ctr, ctrBitLen);
 }
 
-ERR_STATUS ege::SMS4_Crypt::decryptMessage(const Ipp8u *ciphertext, Ipp8u *msg, int & lenmsg, Ipp8u * ctr, int ctrBitLen)
+ERR_STATUS ege::SMS4_Crypt::decryptMessage(const Ipp8u *ciphertext, Ipp8u *msg, int &lenmsg, Ipp8u *ctr, int ctrBitLen)
 {
 	if (ctr == nullptr)
 		return ippsSMS4DecryptCTR(ciphertext, msg, lenmsg, this->key, this->ctr, SMS4_CTR_SIZE * 8);

@@ -168,7 +168,6 @@ ERR_STATUS ege::Filer::readHeader(char * pathSrc)
 		if (strcmp(buffer, "END!"))
 			return FILE_NOT_SUPPORTED;
 	}
-#ifdef CRYPTOGRAPH_EGE
 	else if (size < sizeof(ege::fileProperties)) { // HOST NORMAL + CLIENT CRYPT
 		fread(&this->context, size, 1, fptr);
 		
@@ -179,7 +178,6 @@ ERR_STATUS ege::Filer::readHeader(char * pathSrc)
 		this->context.crypto = ege::CRYPTO_METHOD::NO_ENCRYPT;
 		this->context.hashmethod = ippHashAlg_Unknown;
 	}
-#endif // CRYPTOGRAPH_EGE
 	else if (size > sizeof(ege::fileProperties)) { // HOST CRYPT + CLIENT NORMAL
 		fread(&this->context, sizeof(ege::fileProperties), 1, fptr);
 		
@@ -199,7 +197,7 @@ ERR_STATUS ege::Filer::writeHeader(char * pathDest)
 	if (!fptr)
 		return FILE_INPUT_OUTPUT_ERR;
 
-	size_t size = sizeof(ege::fileProperties);
+	size_t size = DESCRIPTOR_LENGTH;
 
 	fwrite("EGE!", sizeof(char) * 4, 1, fptr);	
 	fwrite(&size, sizeof(size_t), 1, fptr);
@@ -213,10 +211,8 @@ ERR_STATUS ege::Filer::writeHeader(char * pathDest)
 void ege::Filer::configFromHeader()
 {
 	this->setCompressionType(this->context.compression);
-#ifdef CRYPTOGRAPH_EGE
 	this->setEncryptionMethod(this->context.crypto);
 	this->setHashMethod(this->context.hashmethod);
-#endif // CRYPTOGRAPH_EGE
 }
 
 ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest)
@@ -460,7 +456,6 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 			goto cleanup;
 	}
 	else if (this->context.compression == NO_COMPRESS  && this->context.crypto_check) { // Only crypto
-	#ifdef CRYPTOGRAPH_EGE
 		fdst = fopen(pathDest, "wb");
 		if (!(fsrc && fdst)) {
 			status = FILE_INPUT_OUTPUT_ERR;
@@ -471,12 +466,9 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 		fwrite("0", 1, sizeof(ege::fileProperties) + 8 + sizeof(size_t), fdst);		
 		if (status = this->encrypt(fsrc, fdst))
 			goto cleanup;
-	#else
 		return CRYPT_NOT_SUPPORTED;
-	#endif // CRYPTOGRAPH_EGE
 	}
 	else if (this->context.compression != NO_COMPRESS && this->context.crypto_check) { // Both compress + crypto
-	#ifdef CRYPTOGRAPH_EGE
 		while (std::experimental::filesystem::exists(tempname)) // For ensure thread safety
 			tmpnam(tempname);
 		fdst = fopen(tempname, "wb");
@@ -497,9 +489,7 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 		fwrite("0", 1, sizeof(ege::fileProperties) + 8 + sizeof(size_t), fdst);
 		if (status = this->encrypt(fsrc, fdst))
 			goto cleanup;
-	#else
 		return CRYPT_NOT_SUPPORTED;
-	#endif // CRYPTOGRAPH_EGE
 	}
 	else
 		status = UNKNOWN_ERROR;
@@ -548,7 +538,6 @@ ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 			goto cleanup;
 	}
 	else if (this->context.compression == NO_COMPRESS && this->context.crypto_check) { // Only crypto
-	#ifdef CRYPTOGRAPH_EGE
 		fdst = fopen(pathDest, "wb");
 		if (!(fsrc && fdst)) {
 			status = FILE_INPUT_OUTPUT_ERR;
@@ -559,12 +548,9 @@ ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 		fseek(fsrc, sizeof(ege::fileProperties) + 8 + sizeof(size_t), SEEK_CUR);		
 		if (status = this->decrypt(fsrc, fdst))
 			goto cleanup;
-	#else
 		return CRYPT_NOT_SUPPORTED;
-	#endif // CRYPTOGRAPH_EGE
 	}
 	else if (this->context.compression != NO_COMPRESS && this->context.crypto_check) { // Both compress + crypto
-	#ifdef CRYPTOGRAPH_EGE
 		while (std::experimental::filesystem::exists(tempname)) // For ensure thread safety
 			tmpnam(tempname);
 		fdst = fopen(tempname, "wb");
@@ -584,9 +570,7 @@ ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 
 		if (status = this->decompress(fsrc, fdst))
 			goto cleanup;
-	#else
 		return CRYPT_NOT_SUPPORTED;
-	#endif // CRYPTOGRAPH_EGE
 	}
 
 cleanup:
