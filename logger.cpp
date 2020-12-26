@@ -2,7 +2,7 @@
 
 namespace ege {
 
-	inline const char* currentDateTime() {
+	static const char* currentDateTime() {
 		time_t     now = time(0);
 		struct tm  tstruct;
 		static char buf[80];

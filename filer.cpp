@@ -147,7 +147,7 @@ void ege::Filer::prepareHeader()
 	this->context.hashmethod = this->getHashMethod();
 }
 
-ERR_STATUS ege::Filer::readHeader(char * pathSrc)
+ERR_STATUS ege::Filer::readHeader(const char *pathSrc)
 {
 	FILE *fptr = fopen(pathSrc, "rb");
 	if (!fptr)
@@ -158,53 +158,66 @@ ERR_STATUS ege::Filer::readHeader(char * pathSrc)
 
 	fread(buffer, 4, 1, fptr);
 	if (strcmp(buffer, "EGE!"))
+	{
+		fclose(fptr);
 		return FILE_NOT_SUPPORTED;
-	fread(&size, sizeof(size_t), 1, fptr); // Read size
+	}
 
-	if (size == sizeof(ege::fileProperties)) { // HOST + CLIENT EQUAL
-		fread(&this->context, sizeof(ege::fileProperties), 1, fptr);
-		
-		fread(buffer, 4, 1, fptr);
-		if (strcmp(buffer, "END!"))
-			return FILE_NOT_SUPPORTED;
+	uint8_t buff = 0;
+	fread(&buff, sizeof(uint8_t), 1, fptr); // Read encryption method
+	if (buff < ege::CRYPTO_METHOD::CRYPTO_METHOD_MAX)
+		this->crypto_type = static_cast<ege::CRYPTO_METHOD>(buff);
+	else
+	{
+		fclose(fptr);
+		return CRYPT_UNKNOWN_METHOD;
 	}
-	else if (size < sizeof(ege::fileProperties)) { // HOST NORMAL + CLIENT CRYPT
-		fread(&this->context, size, 1, fptr);
-		
-		fread(buffer, 5, 1, fptr);
-		if (strcmp(buffer, "END!"))
-			return FILE_NOT_SUPPORTED;
-		
-		this->context.crypto = ege::CRYPTO_METHOD::NO_ENCRYPT;
-		this->context.hashmethod = ippHashAlg_Unknown;
+
+	fread(&buff, sizeof(uint8_t), 1, fptr); // Read hash method
+	if (buff < ippHashAlg_MaxNo)
+		this->hash_type = static_cast<IppHashAlgId>(buff);
+	else
+	{
+		fclose(fptr);
+		return HASH_UNKNOWN_METHOD;
 	}
-	else if (size > sizeof(ege::fileProperties)) { // HOST CRYPT + CLIENT NORMAL
-		fread(&this->context, sizeof(ege::fileProperties), 1, fptr);
-		
-		fread(buffer, 5, 1, fptr);
-		if (strcmp(buffer, "END!"))
-			return FILE_NOT_SUPPORTED;		
-		if (this->context.crypto_check)
-			return CRYPT_NOT_SUPPORTED;
+
+	fread(&(this->hashcode), sizeof(this->hashcode), 1, fptr);	// Read fullfile hash
+	
+	fread(buffer, 4, 1, fptr);
+	if (strcmp(buffer, "END!"))
+	{
+		fclose(fptr);
+		return FILE_NOT_SUPPORTED;
 	}
 
 	return NO_ERROR;
 }
 
-ERR_STATUS ege::Filer::writeHeader(char * pathDest)
+/** ##############################################################################################################
+	Writes header information to file after encryption
+	Input;
+		pathDest: Path of output file
+	Output;
+		retval	: Returns 0 on success
+*/
+ERR_STATUS ege::Filer::writeHeader(const char *pathDest)
 {
 	FILE *fptr = fopen(pathDest,"rb+");
 	if (!fptr)
 		return FILE_INPUT_OUTPUT_ERR;
 
-	size_t size = DESCRIPTOR_LENGTH;
+	fwrite("EGE!", sizeof(char) * 4, 1, fptr);					// Write start keyword
 
-	fwrite("EGE!", sizeof(char) * 4, 1, fptr);	
-	fwrite(&size, sizeof(size_t), 1, fptr);
-	fwrite(&this->context, sizeof(this->context), 1, fptr);
-	fwrite("END!", sizeof(char) * 4, 1, fptr);
+	uint8_t buff = uint8_t(this->crypto_type);
+	fwrite(&buff, sizeof(uint8_t), 1, fptr);					// Write encryption type
+	buff = uint8_t(this->hash_type);
+	fwrite(&buff, sizeof(uint8_t), 1, fptr);					// Write hash method
+	fwrite(&(this->hashcode), sizeof(this->hashcode), 1, fptr); // Write hash of all file
+
+	fwrite("END!", sizeof(char) * 4, 1, fptr);					// Write end keyword
+
 	fclose(fptr);
-
 	return NO_ERROR;
 }
 
@@ -325,7 +338,6 @@ ERR_STATUS ege::Filer::decrypt(FILE* Src, FILE* Dest)
 	if (!status) {
 		status = hasher.getHash(buff);
 		if (!status) {
-			qDebug() << strlen((char*)this->context.hashcode);
 			if (memcmp(buff, this->context.hashcode, strlen((char*)this->context.hashcode)) - 1)
 				return HASH_CHECK_FAIL;
 		}
@@ -374,12 +386,11 @@ ERR_STATUS ege::Filer::setPath(std::string pathSrc)
 */
 ERR_STATUS ege::Filer::moveFile(std::string pathSrc, std::string pathDest, bool overwrite = false)
 {
-	if (this->path.empty())
+	if (pathSrc.empty())
 		return FILE_NOT_SET;
 	if (!overwrite && this->checkfile(pathDest))
 		return FILE_ALREADY_EXIST;
-	this->path[0] == pathDest[0] ? 
-		rename(this->path.c_str(), pathDest.c_str()) : this->copyFile(this->path, pathDest, overwrite, true);
+	pathSrc[0] == pathDest[0] ? rename(pathSrc.c_str(), pathDest.c_str()) : this->copyFile(pathSrc, pathDest, overwrite, true);
 	
 	return NO_ERROR;
 }
@@ -413,7 +424,7 @@ ERR_STATUS ege::Filer::copyFile(std::string pathSrc, std::string pathDest, bool 
 	}
 
 	// Copy
-	while (size = fread(buf, 1, BUFFER_SIZE, src)) {
+	while ((size = fread(buf, 1, BUFFER_SIZE, src))) {
 		fwrite(buf, size, 1, dest);
 	}
 
@@ -428,13 +439,14 @@ ERR_STATUS ege::Filer::copyFile(std::string pathSrc, std::string pathDest, bool 
 	return NO_ERROR;
 }
 
+// First compress all files independently and hash, then encrypt full file and hash
 ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 {
 	FILE *fsrc, *fdst;
 	ERR_STATUS status = NO_ERROR;
 	char tempname[FILENAME_MAX]; tmpnam(tempname);
 
-	if (this->path == nullptr)
+	if (this->srcDir.empty())
 		return FILE_NOT_SET;
 	if (!overwrite && this->checkfile(pathDest))
 		return FILE_ALREADY_EXIST;
@@ -450,7 +462,6 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 			goto cleanup;
 		}
 
-		this->multiplier = 1;
 		fwrite("0", sizeof(ege::fileProperties) + 8 + sizeof(size_t), 1, fdst);		// Write random memory
 		if (status = this->compress(fsrc, fdst))
 			goto cleanup;
@@ -462,7 +473,6 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 			goto cleanup;
 		}
 
-		this->multiplier = 1;
 		fwrite("0", 1, sizeof(ege::fileProperties) + 8 + sizeof(size_t), fdst);		
 		if (status = this->encrypt(fsrc, fdst))
 			goto cleanup;
@@ -476,8 +486,6 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 			status = FILE_INPUT_OUTPUT_ERR;
 			goto cleanup;
 		}
-
-		this->multiplier = 0.5;
 
 		if (status = this->compress(fsrc, fdst))
 			goto cleanup;

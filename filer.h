@@ -36,8 +36,6 @@ namespace ege {
 		char filename[FILENAME_MAX];	// Filename includes relative directory
 		char extension[FILENAME_MAX];	// Extension of file
 		char lastwrite[25];				// std::asctime has fixed 25 character
-		uint8_t compression;			// Type of compression
-		uint8_t crypto;					// Crypto type
 		uint8_t hashmethod;				// Hash method
 		Ipp8u hashcode[MAX_HASH_LEN];	// Hash code
 	};
@@ -80,6 +78,7 @@ namespace ege {
 
 		Ipp8u* key = nullptr;						// Encryption key
 		size_t keyLen = 0;							// Length of the key
+		Ipp8u hashcode[MAX_HASH_LEN];				// Hash code
 
 		IppHashAlgId hash_type = ippHashAlg_SHA512;										 // Type of hash
 		ege::CRYPTO_METHOD crypto_type = ege::CRYPTO_METHOD::NO_ENCRYPT;				 // Type of encryption
@@ -88,15 +87,15 @@ namespace ege {
 		// ########### Functions ########### //
 		ERR_STATUS moveFile(std::string pathSrc, std::string pathDest, bool overwrite = false);
 		ERR_STATUS copyFile(std::string pathSrc, std::string pathDest, bool overwrite = false, bool removeSrc = false);
-		ERR_STATUS compress(FILE* Src, FILE* Dest);
-		ERR_STATUS decompress(FILE* Src, FILE* Dest);
 		ERR_STATUS encrypt(FILE* Src, FILE* Dest);
 		ERR_STATUS decrypt(FILE* Src, FILE* Dest);
-		
+		ERR_STATUS compress(FILE* Src, FILE* Dest);
+		ERR_STATUS decompress(FILE* Src, FILE* Dest);
+
 		// Container
-		ERR_STATUS readHeader(char* pathSrc);
+		ERR_STATUS readHeader(const char* pathSrc);
+		ERR_STATUS writeHeader(const char* pathDest);
 		void prepareHeader();
-		ERR_STATUS writeHeader(char* pathDest);
 		void configFromHeader();
 
 		// Helper
