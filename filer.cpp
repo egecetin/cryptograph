@@ -1,34 +1,71 @@
 #include "filer.h"
 
-
-inline bool ege::Filer::checkfile(char * file)
+/** ##############################################################################################################
+	Checks whether file exists
+	Input;
+		file	: File path
+	Output;
+		retval	: True if exists, false otherwise
+*/
+inline bool ege::Filer::checkfile(const char * file)
 {
 	return std::experimental::filesystem::exists(file);
 }
 
-char * ege::Filer::readLastWrite(char* file)
+/** ##############################################################################################################
+	Gets the last write time of file
+	Input;
+		file	: File path
+	Output;
+		retval	: asctime formatted last access time
+*/
+char * ege::Filer::readLastWrite(const char* file)
 {
 	auto lasttime = std::experimental::filesystem::last_write_time(file);
 	std::time_t cftime = decltype(lasttime)::clock::to_time_t(lasttime);
 	return std::asctime(std::localtime(&cftime));
 }
 
-int64_t ege::Filer::readSize(char* file)
+/** ##############################################################################################################
+	Gets the file size
+	Input;
+		file	: File path
+	Output;
+		retval	: Size of file in bytes
+*/
+int64_t ege::Filer::readSize(const char* file)
 {
 	return std::experimental::filesystem::file_size(file);
 }
 
+/** ##############################################################################################################
+	Returns compression type sentence
+	Input;
+		id		: Compression type
+	Output;
+		retval	: Compression type in string format
+*/
 const char * ege::Filer::strcomptype(ege::COMPRESSION_METHOD id)
 {
 	switch (id)
 	{
 	case ege::COMPRESSION_METHOD::NO_COMPRESS:
 		return "No compression";
+	case ege::COMPRESSION_METHOD::LZ4:
+		return "LZ4";
 	default:
 		return "Unknown compression code.";
 	}
 }
 
+/** ##############################################################################################################
+	Compress input file and write to destination
+	Input;
+		Src		: Path of file which will be compressed
+		Dest	: File path of write compressed data
+	Output;
+		retval	: Returns 0 on success
+*/
 ERR_STATUS ege::Filer::compress(FILE* Src, FILE* Dest)
 {
 	switch (this->compression_type)
@@ -51,7 +88,7 @@ ERR_STATUS ege::Filer::compress(FILE* Src, FILE* Dest)
 	}
 	case ege::LZO_SLOW:
 	{
-		LZO_Comp compressor(ege::LZO_FAST);
+		LZO_Comp compressor(ege::LZO_SLOW);
 		return compressor.encode(Src, Dest);
 	}
 	case ege::LZ4:
@@ -69,6 +106,14 @@ ERR_STATUS ege::Filer::compress(FILE* Src, FILE* Dest)
 	}
 }
 
+/** ##############################################################################################################
+	Decompress input file and write to destination
+	Input;
+		Src		: Path of file which will be decompressed
+		Dest	: File path of write decompressed data
+	Output;
+		retval	: Returns 0 on success
+*/
 ERR_STATUS ege::Filer::decompress(FILE* Src, FILE* Dest)
 {
 	switch (this->compression_type)
@@ -91,7 +136,7 @@ ERR_STATUS ege::Filer::decompress(FILE* Src, FILE* Dest)
 	}
 	case ege::LZO_SLOW:
 	{
-		LZO_Comp compressor(ege::LZO_FAST);
+		LZO_Comp compressor(ege::LZO_SLOW);
 		return compressor.decode(Src, Dest);
 	}
 	case ege::LZ4:
@@ -109,6 +154,14 @@ ERR_STATUS ege::Filer::decompress(FILE* Src, FILE* Dest)
 	}
 }
 
+/** ##############################################################################################################
+	Copy file
+	Input;
+		Src		: Path of file which will be copied
+		Dest	: Path to copy file
+	Output;
+		retval	: Returns 0 on success
+*/
 ERR_STATUS ege::Filer::copy(char * pathSrc, char * pathDest)
 {
 	size_t size;
@@ -128,6 +181,7 @@ ERR_STATUS ege::Filer::copy(char * pathSrc, char * pathDest)
 
 	return NO_ERROR;
 }
+
 
 void ege::Filer::prepareHeader()
 {
@@ -269,6 +323,7 @@ const char * ege::Filer::strcrypttype(ege::CRYPTO_METHOD id)
 		return "----";
 	}
 }
+
 ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest)
 {
 	size_t size;
@@ -329,6 +384,7 @@ ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest)
 
 	return status;
 }
+
 ERR_STATUS ege::Filer::decrypt(FILE* Src, FILE* Dest)
 {
 	int size;

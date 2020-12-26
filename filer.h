@@ -37,85 +37,78 @@ namespace ege {
 	/*************************************** File Header ***************************************/
 	struct fileProperties
 	{
-		int64_t size;
-		int64_t c_size;
-		char filename[FILENAME_MAX];
-		char extension[FILENAME_MAX];
+		uint64_t size;					// Original file size
+		uint64_t c_size;				// Compressed size
+		char filename[FILENAME_MAX];	// Filename includes relative directory
+		char extension[FILENAME_MAX];	// Extension of file
 		char lastwrite[25];				// std::asctime has fixed 25 character
-		ege::COMPRESSION_METHOD compression;
-		int crypto_check;				// for compatibility
-#ifdef CRYPTOGRAPH_EGE		
-		ege::CRYPTO_METHOD crypto;
-		IppHashAlgId hashmethod;
-		Ipp8u hashcode[MAX_HASH_LEN];
-#endif // CRYPTOGRAPH_EGE
+		uint8_t compression;			// Type of compression
+		uint8_t crypto;					// Crypto type
+		IppHashAlgId hashmethod;		// Hash method
+		Ipp8u hashcode[MAX_HASH_LEN];	// Hash code
 	};
 
 	/*************************************** FileHandler ***************************************/
 	class Filer
 	{
 	public:
-		// Variables
+		// ########### Variables ########### //
 		double progress = 0; // Between 0 - 100
 
-		// Functions
-		Filer(char* pathSrc = nullptr);
+		// ########### Functions ########### //
+		Filer(std::string pathSrc = std::string());
+		Filer(const char* pathSrc = nullptr);
 		
 		ERR_STATUS setPath(char* pathSrc);
-		ERR_STATUS moveFile(char* pathDest, bool overwrite = false);
-		ERR_STATUS copyFile(char* pathDest, bool overwrite = false);
 		ERR_STATUS pack(char* pathDest = nullptr, bool overwrite = false);
 		ERR_STATUS unpack(char* pathDest = nullptr, bool overwrite = false);
-		
-		char* getPath();
-		int64_t readSize(char* file);
-		char* readLastWrite(char* file);
 
+		// Compression functions
 		void setCompressionType(ege::COMPRESSION_METHOD id);
 		ege::COMPRESSION_METHOD getCompressionType(char* type = nullptr);
-
-#ifdef CRYPTOGRAPH_EGE
+		
+		// Encryption functions
 		void setKey(Ipp8u* key, size_t keylen);
-		Ipp8u* getKey(size_t *keylen);
-
 		void setEncryptionMethod(ege::CRYPTO_METHOD id);
 		ege::CRYPTO_METHOD getEncryptionMethod(char* type = nullptr);
-
+		
+		// Hash functions
 		void setHashMethod(IppHashAlgId id);
-		IppHashAlgId getHashMethod(char* type = nullptr);
-#endif // CRYPTOGRAPH_EGE
 
 		~Filer();
 
 	private:
-		// Variables
-		char *path = nullptr;
-		double multiplier = 1;
-		ege::fileProperties context;
-		ege::COMPRESSION_METHOD compression_type = ege::COMPRESSION_METHOD::NO_COMPRESS;		
+		// ########### Variables ########### //
+		double multiplier = 1;						// Variable for calculating progress
+		std::string path = nullptr;					// Directory for processing
+		uint32_t nFiles = 0;						// Number of files given at path
+		std::vector<ege::fileProperties> context;	// Identifiers of files
 
-		// Functions
-		inline bool checkfile(char* file);
-		const char* strcomptype(ege::COMPRESSION_METHOD id);		
+		Ipp8u* key = nullptr;						// Encryption key
+		size_t keyLen = 0;							// Length of the key
+
+		IppHashAlgId hash_type = ippHashAlg_SHA512;										 // Type of hash
+		ege::CRYPTO_METHOD crypto_type = ege::CRYPTO_METHOD::NO_ENCRYPT;				 // Type of encryption
+		ege::COMPRESSION_METHOD compression_type = ege::COMPRESSION_METHOD::NO_COMPRESS; // Type of requested compression		
+
+		// ########### Functions ########### //
+		ERR_STATUS moveFile(const char* pathDest, const char* pathSrc, bool overwrite = false);
+		ERR_STATUS copyFile(char* pathDest, const char* pathSrc, bool overwrite = false);
 		ERR_STATUS compress(FILE* Src, FILE* Dest);
 		ERR_STATUS decompress(FILE* Src, FILE* Dest);
-		ERR_STATUS copy(char* pathSrc, char* pathDest);
+		ERR_STATUS encrypt(FILE* Src, FILE* Dest);
+		ERR_STATUS decrypt(FILE* Src, FILE* Dest);
+		
+		// Container
 		ERR_STATUS readHeader(char* pathSrc);
 		void prepareHeader();
 		ERR_STATUS writeHeader(char* pathDest);
 		void configFromHeader();
 
-#ifdef CRYPTOGRAPH_EGE
-		size_t keylen = 0;
-		Ipp8u* key = nullptr;
-		IppHashAlgId hash_type = ippHashAlg_SHA512;		
-		ege::CRYPTO_METHOD crypto_type = ege::CRYPTO_METHOD::NO_ENCRYPT;
-
-		const char* strhashtype(IppHashAlgId id);
-		const char* strcrypttype(ege::CRYPTO_METHOD id);
-		ERR_STATUS encrypt(FILE* Src, FILE* Dest);
-		ERR_STATUS decrypt(FILE* Src, FILE* Dest);
-#endif // CRYPTOGRAPH_EGE
+		// Helper
+		inline bool checkfile(const char* file);
+		int64_t readSize(const char* file);
+		char* readLastWrite(const char* file);
 	
 	};
 

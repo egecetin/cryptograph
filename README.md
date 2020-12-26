@@ -45,9 +45,5 @@ Application is developed with following configuration
   - ZLIB
 * Support for different key lengths in symmetric key algorithms
 * Improvements to existing compression functions
-* Asymmetric key cryptography algorithms
-  - RSA
-  - ECC
-* Use C API instead of C++ classes (such as BigNumber)
 * Process warnings and errors for Intel Compiler
 
