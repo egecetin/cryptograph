@@ -147,6 +147,13 @@ void ege::Filer::prepareHeader()
 	this->context.hashmethod = this->getHashMethod();
 }
 
+/** ##############################################################################################################
+	Read uncrypted header
+	Input;
+		pathSrc : Path to container file
+	Output;
+		retval	: Returns 0 on success
+*/
 ERR_STATUS ege::Filer::readHeader(const char *pathSrc)
 {
 	FILE *fptr = fopen(pathSrc, "rb");
