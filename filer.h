@@ -26,14 +26,15 @@ namespace ege {
 		LZO_FAST,		// Lempel-Ziv-Oberhumer (IppLZO1X1ST)
 		LZO_SLOW,		// Lempel-Ziv-Oberhumer (IppLZO1XST)
 		LZ4,
-		LZ4_HC			// High-compression mode (Reserved)
+		LZ4_HC,			// High-compression mode (Reserved)
+		COMPRESSION_MAX
 	};
 	
 	struct fileProperties
 	{
 		uint64_t size;					// Original file size
 		uint64_t c_size;				// Compressed size
-		char filename[FILENAME_MAX];	// Filename includes relative directory
+		char filename[FILENAME_MAX];	// Filename includes relative directory and extension
 		char extension[FILENAME_MAX];	// Extension of file
 		char lastwrite[25];				// std::asctime has fixed 25 character
 		uint8_t hashmethod;				// Hash method
@@ -50,21 +51,21 @@ namespace ege {
 		Filer(std::string pathSrc = std::string());
 		
 		ERR_STATUS setPath(std::string pathSrc);
-		ERR_STATUS setTempPath(std::string pathTemp);
+		ERR_STATUS ege::Filer::setTempPath(std::string pathTemp);
 		ERR_STATUS pack(char* pathDest = nullptr, bool overwrite = false);
 		ERR_STATUS unpack(char* pathDest = nullptr, bool overwrite = false);
 
 		// Compression functions
-		void setCompressionType(ege::COMPRESSION_METHOD id);
+		ERR_STATUS ege::Filer::setCompressionType(ege::COMPRESSION_METHOD id);
 		ege::COMPRESSION_METHOD getCompressionType();
 		
 		// Encryption functions
 		void setKey(Ipp8u* key, size_t keylen);
-		void setEncryptionMethod(ege::CRYPTO_METHOD id);
+		ERR_STATUS setEncryptionMethod(ege::CRYPTO_METHOD id);
 		ege::CRYPTO_METHOD getEncryptionMethod();
 		
 		// Hash functions
-		void setHashMethod(IppHashAlgId id);
+		ERR_STATUS setHashMethod(IppHashAlgId id);
 		IppHashAlgId ege::Filer::getHashMethod();
 
 		~Filer();
@@ -84,6 +85,8 @@ namespace ege {
 		ege::CRYPTO_METHOD crypto_type = ege::CRYPTO_METHOD::NO_ENCRYPT;				 // Type of encryption
 		ege::COMPRESSION_METHOD compression_type = ege::COMPRESSION_METHOD::NO_COMPRESS; // Type of requested compression		
 
+		size_t nThread = 1;
+
 		// ########### Functions ########### //
 		ERR_STATUS moveFile(std::string pathSrc, std::string pathDest, bool overwrite = false);
 		ERR_STATUS copyFile(std::string pathSrc, std::string pathDest, bool overwrite = false, bool removeSrc = false);
@@ -95,12 +98,11 @@ namespace ege {
 		// Container
 		ERR_STATUS readHeader(const char* pathSrc);
 		ERR_STATUS writeHeader(const char* pathDest);
-		void prepareHeader();
-		void configFromHeader();
+		ERR_STATUS ege::Filer::prepareContext(std::filesystem::path pathSrc, ege::fileProperties &context);
 
 		// Helper
 		inline bool checkfile(std::string file);
-		int64_t readSize(const char* file);
+		uint64_t readSize(std::filesystem::path file);
 		char* readLastWrite(const char* file);
 	
 	};

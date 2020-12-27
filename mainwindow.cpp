@@ -86,7 +86,7 @@ ERR_STATUS MainWindow::processFile(QString &password)
 {
 	ERR_STATUS status = NO_ERROR;
 	ege::Filer handler;
-	std::experimental::filesystem::path src(this->pathSrc); qDebug() << src.extension().string().c_str();
+	std::experimental::filesystem::path src(this->pathSrc);
 
 	if (std::experimental::filesystem::is_directory(src)) { // If it is a directory this is a packing
 		// Reserved

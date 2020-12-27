@@ -9,7 +9,7 @@
 */
 inline bool ege::Filer::checkfile(std::string file)
 {
-	return std::experimental::filesystem::exists(file);
+	return std::filesystem::exists(file);
 }
 
 /** ##############################################################################################################
@@ -21,8 +21,8 @@ inline bool ege::Filer::checkfile(std::string file)
 */
 char * ege::Filer::readLastWrite(const char* file)
 {
-	auto lasttime = std::experimental::filesystem::last_write_time(file);
-	std::time_t cftime = decltype(lasttime)::clock::to_time_t(lasttime);
+	auto lasttime = std::filesystem::last_write_time(file);
+	std::time_t cftime = lasttime.time_since_epoch().count();
 	return std::asctime(std::localtime(&cftime));
 }
 
@@ -33,9 +33,9 @@ char * ege::Filer::readLastWrite(const char* file)
 	Output;
 		retval	: Size of file in bytes
 */
-int64_t ege::Filer::readSize(const char* file)
+uint64_t ege::Filer::readSize(std::filesystem::path file)
 {
-	return std::experimental::filesystem::file_size(file);
+	return std::filesystem::file_size(file);
 }
 
 /** ##############################################################################################################
@@ -134,17 +134,37 @@ ERR_STATUS ege::Filer::decompress(FILE* Src, FILE* Dest)
 	}
 }
 
-void ege::Filer::prepareHeader()
+/** ##############################################################################################################
+	Prepare file related information
+	Input;
+		pathSrc	: Path of file
+	Output;
+		context	: Information context of file
+		retval	: Returns 0 on success
+*/
+ERR_STATUS ege::Filer::prepareContext(std::filesystem::path pathSrc, ege::fileProperties &context)
 {
-	std::experimental::filesystem::path path = this->path;
-	this->context.size = this->readSize(this->path);
-	strcpy(this->context.filename, path.filename().string().c_str());
-	strcpy(this->context.extension, path.extension().string().c_str());
-	strcpy(this->context.lastwrite, this->readLastWrite(this->path));
-	this->context.compression = this->getCompressionType();
-	this->context.crypto = this->getEncryptionMethod();
-	this->context.crypto == ege::CRYPTO_METHOD::NO_ENCRYPT ? this->context.crypto_check = 0 : this->context.crypto_check = 1;
-	this->context.hashmethod = this->getHashMethod();
+	std::string buff;
+
+	// Write relative directory
+	buff = std::filesystem::relative(pathSrc, this->srcDir).string();
+	if (buff.length() > FILENAME_MAX)
+		return OVER_FILENAME_LIMIT;
+	memcpy(context.filename, buff.c_str(), buff.length());
+
+	// Write extension
+	buff = pathSrc.extension().string();
+	if (buff.length() > FILENAME_MAX)
+		return OVER_FILENAME_LIMIT;
+	memcpy(context.extension, buff.c_str(), buff.length());
+
+	memcpy(context.lastwrite, this->readLastWrite(pathSrc.string().c_str()), 25); // Last access
+	context.size = this->readSize(pathSrc);		// Size of original file
+	context.c_size = 0;							// Size of compressed file
+	context.hashmethod = this->hash_type;		// Hash method
+	memset(context.hashcode, 0, MAX_HASH_LEN);	// Reset hashcode
+
+	return NO_ERROR;
 }
 
 /** ##############################################################################################################
@@ -226,13 +246,6 @@ ERR_STATUS ege::Filer::writeHeader(const char *pathDest)
 
 	fclose(fptr);
 	return NO_ERROR;
-}
-
-void ege::Filer::configFromHeader()
-{
-	this->setCompressionType(this->context.compression);
-	this->setEncryptionMethod(this->context.crypto);
-	this->setHashMethod(this->context.hashmethod);
 }
 
 ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest)
@@ -383,6 +396,22 @@ ERR_STATUS ege::Filer::setPath(std::string pathSrc)
 }
 
 /** ##############################################################################################################
+	(Optional) Sets the temporary working directory
+	Input;
+		pathTemp: Directory to use temporarily
+	Output;
+		retval	: Returns 0 on success
+*/
+ERR_STATUS ege::Filer::setTempPath(std::string pathTemp)
+{
+	if (!std::filesystem::is_directory(pathTemp))
+		return NOT_A_DIRECTORY;
+
+	this->tempDir = pathTemp;
+	return NO_ERROR;
+}
+
+/** ##############################################################################################################
 	Move a file
 	Input;
 		pathSrc		: Path of file which will be copied
@@ -441,7 +470,7 @@ ERR_STATUS ege::Filer::copyFile(std::string pathSrc, std::string pathDest, bool 
 
 	// Remove src file is requested
 	if (removeSrc)
-		std::experimental::filesystem::remove(pathSrc);
+		std::filesystem::remove(pathSrc);
 
 	return NO_ERROR;
 }
@@ -486,7 +515,7 @@ ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
 		return CRYPT_NOT_SUPPORTED;
 	}
 	else if (this->context.compression != NO_COMPRESS && this->context.crypto_check) { // Both compress + crypto
-		while (std::experimental::filesystem::exists(tempname)) // For ensure thread safety
+		while (std::filesystem::exists(tempname)) // For ensure thread safety
 			tmpnam(tempname);
 		fdst = fopen(tempname, "wb");
 		if (!(fsrc && fdst)) {
@@ -516,9 +545,9 @@ cleanup:
 	if (!status)
 		this->writeHeader(pathDest);
 	else
-		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
+		std::filesystem::exists(pathDest) ? std::filesystem::remove(pathDest) : void();
 
-	std::experimental::filesystem::exists(tempname) ? std::experimental::filesystem::remove(tempname) : void();
+	std::filesystem::exists(tempname) ? std::filesystem::remove(tempname) : void();
 	
 	return status;
 }
@@ -566,7 +595,7 @@ ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 		return CRYPT_NOT_SUPPORTED;
 	}
 	else if (this->context.compression != NO_COMPRESS && this->context.crypto_check) { // Both compress + crypto
-		while (std::experimental::filesystem::exists(tempname)) // For ensure thread safety
+		while (std::filesystem::exists(tempname)) // For ensure thread safety
 			tmpnam(tempname);
 		fdst = fopen(tempname, "wb");
 		if (!(fsrc && fdst)) {
@@ -593,9 +622,9 @@ cleanup:
 	fclose(fsrc); fclose(fdst);
 
 	if (status)
-		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
+		std::filesystem::exists(pathDest) ? std::filesystem::remove(pathDest) : void();
 
-	std::experimental::filesystem::exists(tempname) ? std::experimental::filesystem::remove(tempname) : void();
+	std::filesystem::exists(tempname) ? std::filesystem::remove(tempname) : void();
 
 	return status;
 }
@@ -606,9 +635,12 @@ cleanup:
 		id	: Compression type
 	Output;
 */
-void ege::Filer::setCompressionType(ege::COMPRESSION_METHOD id)
+ERR_STATUS ege::Filer::setCompressionType(ege::COMPRESSION_METHOD id)
 {
+	if (id >= ege::COMPRESSION_METHOD::COMPRESSION_MAX)
+		return COMP_UNKNOWN_METHOD;
 	this->compression_type = id;
+	return NO_ERROR;
 }
 
 /** ##############################################################################################################
@@ -647,9 +679,12 @@ void ege::Filer::setKey(Ipp8u * key, size_t keylen)
 		id	: Encryption type
 	Output;
 */
-void ege::Filer::setEncryptionMethod(ege::CRYPTO_METHOD id)
+ERR_STATUS ege::Filer::setEncryptionMethod(ege::CRYPTO_METHOD id)
 {
+	if (id >= ege::CRYPTO_METHOD::CRYPTO_METHOD_MAX)
+		return CRYPT_UNKNOWN_METHOD;
 	this->crypto_type = id;
+	return NO_ERROR;
 }
 
 /** ##############################################################################################################
@@ -669,9 +704,12 @@ ege::CRYPTO_METHOD ege::Filer::getEncryptionMethod()
 		id	: Hash method
 	Output;
 */
-void ege::Filer::setHashMethod(IppHashAlgId id)
+ERR_STATUS ege::Filer::setHashMethod(IppHashAlgId id)
 {
+	if (id >= ippHashAlg_MaxNo)
+		return HASH_UNKNOWN_METHOD;
 	this->hash_type = id;
+	return NO_ERROR;
 }
 
 /** ##############################################################################################################
@@ -712,7 +750,7 @@ ERR_STATUS ege::LZSS_Comp::encode(char * pathSrc, char * pathDest)
 	if (!(src && dest)) {
 		fclose(src);
 		fclose(dest);
-		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
+		std::filesystem::exists(pathDest) ? std::filesystem::remove(pathDest) : void();
 		return FILE_INPUT_OUTPUT_ERR;
 	}
 	status = this->encode(src, dest);
@@ -733,7 +771,7 @@ ERR_STATUS ege::LZSS_Comp::decode(char * pathSrc, char * pathDest)
 	if (!(src && dest)) {
 		fclose(src);
 		fclose(dest);
-		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
+		std::filesystem::exists(pathDest) ? std::filesystem::remove(pathDest) : void();
 		return FILE_INPUT_OUTPUT_ERR;
 	}
 
@@ -868,7 +906,7 @@ ERR_STATUS ege::LZO_Comp::encode(char * pathSrc, char * pathDest)
 	if (!(src && dest)) {
 		fclose(src);
 		fclose(dest);
-		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
+		std::filesystem::exists(pathDest) ? std::filesystem::remove(pathDest) : void();
 		return FILE_INPUT_OUTPUT_ERR;
 	}
 
@@ -890,7 +928,7 @@ ERR_STATUS ege::LZO_Comp::decode(char * pathSrc, char * pathDest)
 	if (!(src && dest)) {
 		fclose(src);
 		fclose(dest);
-		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
+		std::filesystem::exists(pathDest) ? std::filesystem::remove(pathDest) : void();
 		return FILE_INPUT_OUTPUT_ERR;
 	}
 	status = this->decode(src, dest);
@@ -991,7 +1029,7 @@ ERR_STATUS ege::LZ4_Comp::encode(char * pathSrc, char * pathDest)
 	if (!(src && dest)) {
 		fclose(src);
 		fclose(dest);
-		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
+		std::filesystem::exists(pathDest) ? std::filesystem::remove(pathDest) : void();
 		return FILE_INPUT_OUTPUT_ERR;
 	}
 
@@ -1013,7 +1051,7 @@ ERR_STATUS ege::LZ4_Comp::decode(char * pathSrc, char * pathDest)
 	if (!(src && dest)) {
 		fclose(src);
 		fclose(dest);
-		std::experimental::filesystem::exists(pathDest) ? std::experimental::filesystem::remove(pathDest) : void();
+		std::filesystem::exists(pathDest) ? std::filesystem::remove(pathDest) : void();
 		return FILE_INPUT_OUTPUT_ERR;
 	}
 
