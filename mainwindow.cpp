@@ -67,6 +67,7 @@ void MainWindow::convert()
 			flag = true;
 		}	
 	}
+	// Hash the password for get desired bit length
 
 	// pack/unpack
 	status = processFile(text);

@@ -27,6 +27,21 @@ char * ege::Filer::readLastWrite(const char* file)
 }
 
 /** ##############################################################################################################
+	Gets the number of files
+	Input;
+		file	: Directory path
+	Output;
+		retval	: Total count of files
+*/
+size_t ege::Filer::getNumFiles(std::filesystem::path path)
+{
+	using fp = bool(*)(const std::filesystem::path&);
+	return std::count_if(std::filesystem::recursive_directory_iterator(path), 
+						std::filesystem::recursive_directory_iterator{}, 
+						(fp)std::filesystem::is_regular_file);
+}
+
+/** ##############################################################################################################
 	Gets the file size
 	Input;
 		file	: File path
@@ -39,7 +54,8 @@ uint64_t ege::Filer::readSize(std::filesystem::path file)
 }
 
 /** ##############################################################################################################
-	Compress input file and write to destination
+	Compress an input file and write to destination. Does not write any information to header. For decompress all
+	parameters should set manually.
 	Input;
 		Src		: Path of file which will be compressed
 		Dest	: File path of write compressed data
@@ -87,7 +103,8 @@ ERR_STATUS ege::Filer::compress(FILE* Src, FILE* Dest)
 }
 
 /** ##############################################################################################################
-	Decompress input file and write to destination
+	Decompress an input file and write to destination. Does not read any information from header. All parameters
+	should set manually.
 	Input;
 		Src		: Path of file which will be decompressed
 		Dest	: File path of write decompressed data
@@ -135,7 +152,33 @@ ERR_STATUS ege::Filer::decompress(FILE* Src, FILE* Dest)
 }
 
 /** ##############################################################################################################
-	Prepare file related information
+	Sets the maximum thread count for packing/unpacking operations
+	Input;
+		n		: Number of threads
+	Output;
+		retval	: Returns 0 on success
+*/
+ERR_STATUS ege::Filer::setThreadNum(size_t n)
+{
+	if (n > omp_get_max_threads())
+		return TOO_MANY_THREADS;
+	this->nThread = n;
+	return NO_ERROR;
+}
+
+/** ##############################################################################################################
+	Returns the maximum thread count for packing/unpacking operations
+	Input;
+	Output;
+		retval	: Number of threads
+*/
+size_t ege::Filer::getThreadNum()
+{
+	return this->nThread;
+}
+
+/** ##############################################################################################################
+	Prepare file related information. Compressed size, hashcode, startIdx and nIdx should be set after process.
 	Input;
 		pathSrc	: Path of file
 	Output;
@@ -163,12 +206,14 @@ ERR_STATUS ege::Filer::prepareContext(std::filesystem::path pathSrc, ege::filePr
 	context.c_size = 0;							// Size of compressed file
 	context.hashmethod = this->hash_type;		// Hash method
 	memset(context.hashcode, 0, MAX_HASH_LEN);	// Reset hashcode
+	context.startIdx = 0;						// Start position inside container
+	context.nIdx = 0;							// Number of frames
 
 	return NO_ERROR;
 }
 
 /** ##############################################################################################################
-	Read uncrypted header
+	Read unencrypted header
 	Input;
 		pathSrc : Path to container file
 	Output;
@@ -248,6 +293,14 @@ ERR_STATUS ege::Filer::writeHeader(const char *pathDest)
 	return NO_ERROR;
 }
 
+/** ##############################################################################################################
+	Encrypts a file. Does not write any information to header. For decryption all parameters should set manually
+	Input;
+		Src		: Source file path
+		Dest	: Destination file path
+	Output;
+		retval	: Returns 0 on success
+*/
 ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest)
 {
 	size_t size;
@@ -260,7 +313,7 @@ ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest)
 	{
 	case ege::CRYPTO_METHOD::AES:
 	{
-		AES_Crypt cryptograph(this->key);
+		AES_Crypt cryptograph(this->key, this->keyLen);
 		if (status = cryptograph.encryptMessage(KNOWN_WORD, 40, cipher))
 			return status;
 		fwrite(cipher, 40, 1, Dest);
@@ -276,7 +329,7 @@ ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest)
 	}
 	case ege::CRYPTO_METHOD::SMS4:
 	{
-		SMS4_Crypt cryptograph(this->key);
+		SMS4_Crypt cryptograph(this->key, this->keyLen);
 		if (status = cryptograph.encryptMessage(KNOWN_WORD, 40, cipher))
 			return status;
 		fwrite(cipher, 40, 1, Dest);
@@ -305,6 +358,14 @@ ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest)
 	return status;
 }
 
+/** ##############################################################################################################
+	Decrypts a file. Does not read any information from header. All parameters should set manually.
+	Input;
+		Src		: Source file path
+		Dest	: Destination file path
+	Output;
+		retval	: Returns 0 on success
+*/
 ERR_STATUS ege::Filer::decrypt(FILE* Src, FILE* Dest)
 {
 	int size;
@@ -317,7 +378,7 @@ ERR_STATUS ege::Filer::decrypt(FILE* Src, FILE* Dest)
 	{
 	case ege::CRYPTO_METHOD::AES:
 	{
-		AES_Crypt cryptograph(this->key);
+		AES_Crypt cryptograph(this->key, this->keyLen);
 		size = fread(cipher, 1, 40, Src);
 		if (status = cryptograph.decryptMessage(cipher, buff, size))
 			return status;
@@ -335,7 +396,7 @@ ERR_STATUS ege::Filer::decrypt(FILE* Src, FILE* Dest)
 	}
 	case ege::CRYPTO_METHOD::SMS4:
 	{
-		SMS4_Crypt cryptograph(this->key);
+		SMS4_Crypt cryptograph(this->key, this->keyLen);
 		size = fread(cipher, 1, 40, Src);
 		if (status = cryptograph.decryptMessage(cipher, buff, size))
 			return status;
@@ -475,79 +536,96 @@ ERR_STATUS ege::Filer::copyFile(std::string pathSrc, std::string pathDest, bool 
 	return NO_ERROR;
 }
 
-// First compress all files independently and hash, then encrypt full file and hash
-ERR_STATUS ege::Filer::pack(char * pathDest, bool overwrite)
+// First compress all files independently and hash, then encrypt full file (start ctr from zero for every file) and hash
+ERR_STATUS ege::Filer::pack(char *pathDest, bool overwrite)
 {
-	FILE *fsrc, *fdst;
-	ERR_STATUS status = NO_ERROR;
-	char tempname[FILENAME_MAX]; tmpnam(tempname);
 
+	// Check variables
 	if (this->srcDir.empty())
 		return FILE_NOT_SET;
 	if (!overwrite && this->checkfile(pathDest))
 		return FILE_ALREADY_EXIST;
-	
-	this->progress = 0;
-	this->prepareHeader();	
+	if (!(this->crypto_type) && !(this->key))
+		return CRYPT_KEY_NOT_SET;
 
-	fsrc = fopen(this->path, "rb");
-	if (this->context.compression != NO_COMPRESS && !this->context.crypto_check) {	// Only compress	
-		fdst = fopen(pathDest, "wb");
-		if (!(fsrc && fdst)) {
-			status = FILE_INPUT_OUTPUT_ERR;
-			goto cleanup;
-		}
+	uint64_t pos = 0;
+	ERR_STATUS status = NO_ERROR;
+	std::vector<char[FILENAME_MAX]> tempNames;
 
-		fwrite("0", sizeof(ege::fileProperties) + 8 + sizeof(size_t), 1, fdst);		// Write random memory
-		if (status = this->compress(fsrc, fdst))
-			goto cleanup;
-	}
-	else if (this->context.compression == NO_COMPRESS  && this->context.crypto_check) { // Only crypto
-		fdst = fopen(pathDest, "wb");
-		if (!(fsrc && fdst)) {
-			status = FILE_INPUT_OUTPUT_ERR;
-			goto cleanup;
-		}
 
-		fwrite("0", 1, sizeof(ege::fileProperties) + 8 + sizeof(size_t), fdst);		
-		if (status = this->encrypt(fsrc, fdst))
-			goto cleanup;
-		return CRYPT_NOT_SUPPORTED;
-	}
-	else if (this->context.compression != NO_COMPRESS && this->context.crypto_check) { // Both compress + crypto
-		while (std::filesystem::exists(tempname)) // For ensure thread safety
+	// Check source type (directory or file)
+	if (std::filesystem::is_directory(this->srcDir))
+	{
+		// Set variables
+		this->nFiles = this->getNumFiles(this->srcDir);
+		this->contexts.reserve(this->nFiles);
+		tempNames.reserve(this->nFiles);
+
+		omp_set_num_threads(this->nThread);
+
+		// Compress all files and hash
+		#pragma omp parallel for
+		for (const auto &entry : std::filesystem::recursive_directory_iterator(this->srcDir))
+		{
+			ERR_STATUS status_local = NO_ERROR;
+			ege::fileProperties context;
+			char tempname[FILENAME_MAX];
 			tmpnam(tempname);
-		fdst = fopen(tempname, "wb");
-		if (!(fsrc && fdst)) {
-			status = FILE_INPUT_OUTPUT_ERR;
-			goto cleanup;
+
+			// Prepare context information
+			if ((status_local = prepareContext(entry.path(), context)))
+			{
+				#pragma omp critical
+					status = status_local;
+			}
+
+			// Compress
+
+			// Hash
+
+			// Set last variables
+			context.nIdx = 0;
+			context.c_size = 0;
+			context.hashcode;
+
+			// Push to vector
+			#pragma omp critical
+			{
+				context.startIdx = pos;				// Set start position
+				pos += context.nIdx;				// Move position indicator
+				tempNames.push_back(tempname);		// Record tempfile name
+				this->contexts.push_back(context);	// Record context
+
+				this->progress += 0.5 / this->nFiles;
+			}
+
 		}
 
-		if (status = this->compress(fsrc, fdst))
-			goto cleanup;
-		this->progress = 50;
+		// Encrypt context information and write
 
-		fclose(fsrc); fsrc = fopen(tempname, "rb");
-		fclose(fdst); fdst = fopen(pathDest, "wb");
 
-		fwrite("0", 1, sizeof(ege::fileProperties) + 8 + sizeof(size_t), fdst);
-		if (status = this->encrypt(fsrc, fdst))
-			goto cleanup;
-		return CRYPT_NOT_SUPPORTED;
+		// Encrypt and concat files
+		for (const auto &entry : tempNames)
+		{
+
+			this->progress += 0.5 / this->nFiles;
+		}
+
+		// Set hash code and write header
+
+		this->writeHeader(pathDest);
 	}
-	else
-		status = UNKNOWN_ERROR;
 
 cleanup:
 	this->progress = 100;
-	fclose(fsrc); fclose(fdst);
 	
-	if (!status)
-		this->writeHeader(pathDest);
-	else
+	if (status)
+	{
 		std::filesystem::exists(pathDest) ? std::filesystem::remove(pathDest) : void();
 
-	std::filesystem::exists(tempname) ? std::filesystem::remove(tempname) : void();
+		for (const auto &entry : tempNames)
+			std::filesystem::remove(entry);
+	}
 	
 	return status;
 }

@@ -12,8 +12,9 @@ typedef int ERR_STATUS;
 #define GEN_ID		2
 
 /* General Error Code Definitions */
-#define NO_ERROR				0
-#define UNKNOWN_ERROR			1
+#define NO_ERROR				 0
+#define UNKNOWN_ERROR			 1
+#define TOO_MANY_THREADS		 2
 
 /* File Error Codes */
 #define FILE_NOT_SUPPORTED		30
