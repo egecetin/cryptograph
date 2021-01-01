@@ -305,6 +305,7 @@ ERR_STATUS ege::Filer::writeHeader(const char *pathDest)
 		Dest	: Destination file path
 		keyword	: Flag for whether write keyword or not
 	Output;
+		hashcode: Hash of the file
 		retval	: Returns 0 on success
 */
 ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest, Ipp8u* hashcode, bool keyword)
@@ -375,10 +376,12 @@ ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest, Ipp8u* hashcode, bool keyw
 	Input;
 		Src		: Source file path
 		Dest	: Destination file path
+		hashcode: Hash of the file for check
+		keyword	: Flag for whether write keyword or not
 	Output;
 		retval	: Returns 0 on success
 */
-ERR_STATUS ege::Filer::decrypt(FILE* Src, FILE* Dest, bool keyword)
+ERR_STATUS ege::Filer::decrypt(FILE* Src, FILE* Dest, Ipp8u *hashcode, bool keyword)
 {
 	int size;
 	ERR_STATUS status = NO_ERROR;
@@ -430,8 +433,8 @@ ERR_STATUS ege::Filer::decrypt(FILE* Src, FILE* Dest, bool keyword)
 
 	if (!status) {
 		status = hasher.getHash(buff);
-		if (!status) {
-			if (memcmp(buff, this->context.hashcode, strlen((char*)this->context.hashcode)) - 1)
+		if (!status && !hashcode) {
+			if (memcmp(buff, hashcode, MAX_HASH_LEN))
 				return HASH_CHECK_FAIL;
 		}
 	}

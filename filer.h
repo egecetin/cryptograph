@@ -59,7 +59,7 @@ namespace ege {
 		ERR_STATUS pack(const char* pathDest, bool overwrite = false);
 		ERR_STATUS unpack(const char* pathDest, bool overwrite = false);
 		ERR_STATUS encrypt(FILE* Src, FILE* Dest, Ipp8u* hashcode, bool keyword);
-		ERR_STATUS decrypt(FILE* Src, FILE* Dest, bool keyword);
+		ERR_STATUS decrypt(FILE* Src, FILE* Dest, Ipp8u *hashcode, bool keyword);
 		ERR_STATUS compress(FILE* Src, FILE* Dest);
 		ERR_STATUS decompress(FILE* Src, FILE* Dest);
 
