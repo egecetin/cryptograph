@@ -35,6 +35,22 @@ ERR_STATUS ege::AES_Crypt::setKey(const Ipp8u *pkey, size_t keyLen)
 	return status;
 }
 
+ERR_STATUS ege::AES_Crypt::resetCtr(Ipp8u * ctr, int ctrBitLen)
+{
+	if (ctrBitLen > AES_CTR_SIZE)
+		return CRYPT_CTR_OVERFLOW;
+	if (this->ctr)
+		delete this->ctr;
+	
+	this->ctr = new Ipp8u[AES_CTR_SIZE];
+	if (!ctr)
+		memset(this->ctr, 1, AES_CTR_SIZE);
+	else
+		memcpy(this->ctr + AES_CTR_SIZE - (ctrBitLen / 8), ctr, ctrBitLen / 8);
+
+	return NO_ERROR;
+}
+
 ERR_STATUS ege::AES_Crypt::encryptMessage(const Ipp8u *msg, int lenmsg, Ipp8u *ciphertext, Ipp8u *ctr, int ctrBitLen)
 {
 	if (ctr == nullptr) // If ctr not passed use internal ctr
@@ -103,6 +119,22 @@ ERR_STATUS ege::SMS4_Crypt::setKey(const Ipp8u *key, size_t keyLen)
 	return ippsSMS4SetKey(key, keyLen / 8, this->key);
 }
 
+ERR_STATUS ege::SMS4_Crypt::resetCtr(Ipp8u * ctr, int ctrBitLen)
+{
+	if (ctrBitLen > SMS4_CTR_SIZE)
+		return CRYPT_CTR_OVERFLOW;
+	if (this->ctr)
+		delete this->ctr;
+
+	this->ctr = new Ipp8u[SMS4_CTR_SIZE];
+	if (!ctr)
+		memset(this->ctr, 1, SMS4_CTR_SIZE);
+	else
+		memcpy(this->ctr + SMS4_CTR_SIZE - (ctrBitLen / 8), ctr, ctrBitLen / 8);
+
+	return NO_ERROR;
+}
+
 ERR_STATUS ege::SMS4_Crypt::encryptMessage(const Ipp8u *msg, int lenmsg, Ipp8u *ciphertext, Ipp8u *ctr, int ctrBitLen)
 {
 	if (ctr == nullptr)
@@ -160,6 +192,20 @@ ege::Hash_Coder::Hash_Coder(IppHashAlgId id)
 ERR_STATUS ege::Hash_Coder::update(Ipp8u * msg, size_t lenmsg)
 {
 	return ippsHashUpdate(msg, lenmsg, this->context);
+}
+
+ERR_STATUS ege::Hash_Coder::calcFileHash(FILE * fptr, Ipp8u *hashCode)
+{
+	ERR_STATUS status = NO_ERROR;
+	size_t size = 0;
+	Ipp8u buf[MAX_HASH_MSG_LEN];
+	while ((size = fread(buf, 1, MAX_HASH_MSG_LEN, fptr))) {
+		status = this->update(buf, size);
+		if (status)
+			return status;
+	}
+
+	return this->getHash(hashCode);
 }
 
 ERR_STATUS ege::Hash_Coder::getHash(Ipp8u *code)

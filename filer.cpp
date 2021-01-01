@@ -41,6 +41,11 @@ size_t ege::Filer::getNumFiles(std::filesystem::path path)
 						(fp)std::filesystem::is_regular_file);
 }
 
+inline void ege::Filer::packContext(const fileProperties context, Ipp8u* packedBin)
+{
+
+}
+
 /** ##############################################################################################################
 	Gets the file size
 	Input;
@@ -298,10 +303,11 @@ ERR_STATUS ege::Filer::writeHeader(const char *pathDest)
 	Input;
 		Src		: Source file path
 		Dest	: Destination file path
+		keyword	: Flag for whether write keyword or not
 	Output;
 		retval	: Returns 0 on success
 */
-ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest)
+ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest, Ipp8u* hashcode, bool keyword)
 {
 	size_t size;
 	ERR_STATUS status = NO_ERROR;	
@@ -314,9 +320,12 @@ ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest)
 	case ege::CRYPTO_METHOD::AES:
 	{
 		AES_Crypt cryptograph(this->key, this->keyLen);
-		if (status = cryptograph.encryptMessage(KNOWN_WORD, 40, cipher))
-			return status;
-		fwrite(cipher, 40, 1, Dest);
+		if (keyword)
+		{
+			if (status = cryptograph.encryptMessage(KNOWN_WORD, 40, cipher))
+				return status;
+			fwrite(cipher, 40, 1, Dest);
+		}
 
 		while (size = fread(buff, 1, BUFFER_SIZE, Src)) {
 			if (status = cryptograph.encryptMessage(buff, size, cipher))
@@ -330,9 +339,12 @@ ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest)
 	case ege::CRYPTO_METHOD::SMS4:
 	{
 		SMS4_Crypt cryptograph(this->key, this->keyLen);
-		if (status = cryptograph.encryptMessage(KNOWN_WORD, 40, cipher))
-			return status;
-		fwrite(cipher, 40, 1, Dest);
+		if (keyword)
+		{
+			if (status = cryptograph.encryptMessage(KNOWN_WORD, 40, cipher))
+				return status;
+			fwrite(cipher, 40, 1, Dest);
+		}
 
 		while (size = fread(buff, 1, BUFFER_SIZE, Src)) {
 			if (status = cryptograph.encryptMessage(buff, size, cipher))
@@ -348,7 +360,7 @@ ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest)
 	}
 
 	if (!status)
-		status = hasher.getHash(this->context.hashcode);
+		status = hasher.getHash(hashcode);
 		
 	for (size_t i = 0; i < BUFFER_SIZE; ++i)
 		buff[i] = 0;
@@ -366,7 +378,7 @@ ERR_STATUS ege::Filer::encrypt(FILE* Src, FILE* Dest)
 	Output;
 		retval	: Returns 0 on success
 */
-ERR_STATUS ege::Filer::decrypt(FILE* Src, FILE* Dest)
+ERR_STATUS ege::Filer::decrypt(FILE* Src, FILE* Dest, bool keyword)
 {
 	int size;
 	ERR_STATUS status = NO_ERROR;
@@ -536,10 +548,16 @@ ERR_STATUS ege::Filer::copyFile(std::string pathSrc, std::string pathDest, bool 
 	return NO_ERROR;
 }
 
-// First compress all files independently and hash, then encrypt full file (start ctr from zero for every file) and hash
-ERR_STATUS ege::Filer::pack(char *pathDest, bool overwrite)
+/** ##############################################################################################################
+	First compress all files independently and hash, then encrypt full file (reset ctr for every file) and hash
+	Input;
+		pathDest	: Path to output file
+		overwrite	: If it is true destination file will be overwrited
+	Output;
+		retval	: Returns 0 on success
+*/
+ERR_STATUS ege::Filer::pack(const char *pathDest, bool overwrite)
 {
-
 	// Check variables
 	if (this->srcDir.empty())
 		return FILE_NOT_SET;
@@ -552,83 +570,276 @@ ERR_STATUS ege::Filer::pack(char *pathDest, bool overwrite)
 	ERR_STATUS status = NO_ERROR;
 	std::vector<char[FILENAME_MAX]> tempNames;
 
+	// Set variables
+	this->nFiles = this->getNumFiles(this->srcDir);
+	this->contexts.reserve(this->nFiles);
+	tempNames.reserve(this->nFiles);
 
-	// Check source type (directory or file)
+	omp_set_num_threads(this->nThread);
+
+	// Prepare file list
+	std::vector<std::string> fileNames;
+	fileNames.reserve(this->nFiles);
 	if (std::filesystem::is_directory(this->srcDir))
 	{
-		// Set variables
-		this->nFiles = this->getNumFiles(this->srcDir);
-		this->contexts.reserve(this->nFiles);
-		tempNames.reserve(this->nFiles);
-
-		omp_set_num_threads(this->nThread);
-
-		// Compress all files and hash
-		#pragma omp parallel for
 		for (const auto &entry : std::filesystem::recursive_directory_iterator(this->srcDir))
+			fileNames.push_back(entry.path().string());
+	}
+	else
+		fileNames.push_back(this->srcDir);
+
+	// Compress all files and hash
+	#pragma omp parallel for
+	for (const auto &entry : fileNames)
+	{
+		if (std::filesystem::is_directory(entry))
+			continue;
+
+		ERR_STATUS status_local = NO_ERROR;
+		ege::fileProperties context;
+		Ipp8u hash[MAX_HASH_LEN];
+		char tempname[FILENAME_MAX];
+
+		// Prepare context information
+		if ((status_local = prepareContext(entry, context)))
 		{
-			ERR_STATUS status_local = NO_ERROR;
-			ege::fileProperties context;
-			char tempname[FILENAME_MAX];
+			#pragma omp critical
+			status = status_local;
+		}
+			
+		// Compress if requested
+		if (this->compression_type)
+		{
 			tmpnam(tempname);
 
-			// Prepare context information
-			if ((status_local = prepareContext(entry.path(), context)))
+			FILE *fSrc = fopen(entry.c_str(), "rb");
+			FILE *fDest = fopen(tempname, "wb");
+			if (!(fSrc && fDest))
+			{
+				fclose(fSrc);
+				fclose(fDest);
+				#pragma omp critical
+				status = FILE_INPUT_OUTPUT_ERR;
+			}
+			status_local = this->compress(fSrc, fDest);
+			fclose(fSrc);
+			fclose(fDest);
+			if (status_local)
 			{
 				#pragma omp critical
-					status = status_local;
+				status = status_local;
 			}
-
-			// Compress
-
-			// Hash
-
-			// Set last variables
-			context.nIdx = 0;
-			context.c_size = 0;
-			context.hashcode;
-
-			// Push to vector
-			#pragma omp critical
-			{
-				context.startIdx = pos;				// Set start position
-				pos += context.nIdx;				// Move position indicator
-				tempNames.push_back(tempname);		// Record tempfile name
-				this->contexts.push_back(context);	// Record context
-
-				this->progress += 0.5 / this->nFiles;
-			}
-
 		}
+		else // Set source filename to tempname
+			memcpy(tempname, entry.c_str(), entry.length());
+
+		// Hash
+		FILE *fPtr = fopen(tempname, "rb");
+		ege::Hash_Coder hasher(this->hash_type);
+		status_local = hasher.calcFileHash(fPtr, hash);
+		fclose(fPtr);
+
+		// Set last variables
+		memcpy(context.hashcode, hash, MAX_HASH_LEN);
+		context.c_size = this->readSize(tempname);
+		context.nIdx = uint64_t(context.c_size / BUFFER_SIZE + 1);
+
+		// Push to vector
+		#pragma omp critical
+		{
+			context.startIdx = pos;					// Set start position
+			pos += context.nIdx;					// Move position indicator
+			tempNames.push_back(tempname);			// Record tempfile name
+			this->contexts.push_back(context);		// Record context
+
+			this->progress += 0.5 / this->nFiles;
+		}
+	}
+		
+	if (status)
+		goto cleanup;
+
+	// Sort contexts to ensure order
+	std::sort(contexts.begin(), contexts.end(), [](const ege::fileProperties &left, const ege::fileProperties &right) {
+		return left.startIdx < right.startIdx;
+	});
+
+	// Pass file header
+	FILE *fDest = fopen(pathDest, "wb");
+	char nullBuffer[HEADER_SIZE] = { '\0' };
+	fwrite(nullBuffer, sizeof(char), HEADER_SIZE, fDest);
+
+	// Start encryption and concat
+	ege::Hash_Coder hasher(this->hash_type);
+	switch (this->crypto_type)
+	{
+	case ege::CRYPTO_METHOD::NO_ENCRYPT: // Only concat files
+	{
+		Ipp8u buff[BUFFER_SIZE];
+		size_t sizeBuff = 0;
+
+		// First encrypt number of files
+		memcpy(buff, &(this->nFiles), sizeof(this->nFiles));
+		if ((status = hasher.update(buff, sizeof(this->nFiles))))
+			goto cleanup;
+		fwrite(buff, sizeof(this->nFiles), 1, fDest);
 
 		// Encrypt context information and write
+		for (const auto &entry : this->contexts)
+		{
+			Ipp8u contextBin[DESCRIPTOR_LENGTH];
+			this->packContext(entry, contextBin);
 
+			if ((status = hasher.update(contextBin, sizeof(contextBin))))
+				goto cleanup;
+			fwrite(contextBin, sizeof(contextBin), 1, fDest);
+		}
 
 		// Encrypt and concat files
 		for (const auto &entry : tempNames)
 		{
+			size_t size = 0;
+			FILE *fptr = fopen(entry, "rb");
+
+			while (size = fread(buff, 1, BUFFER_SIZE, fptr)) {
+				if (status = hasher.update(buff, size))
+					break;
+				fwrite(buff, size, 1, fDest);
+			}
+			fclose(fptr);
 
 			this->progress += 0.5 / this->nFiles;
 		}
+		break;
+	}
+	case ege::CRYPTO_METHOD::AES:
+	{
+		ege::AES_Crypt crypt(this->key, this->keyLen);
+		Ipp8u buff[BUFFER_SIZE], cipher[BUFFER_SIZE];
+		size_t sizeBuff = 0;
 
-		// Set hash code and write header
+		// First write keyword for password check
+		if (status = crypt.encryptMessage(KNOWN_WORD, 40, cipher))
+			goto cleanup;
+		fwrite(cipher, 40, 1, fDest);
 
-		this->writeHeader(pathDest);
+		// First encrypt number of files
+		memcpy(buff, &(this->nFiles), sizeof(this->nFiles));
+		if((status = crypt.encryptMessage(buff, sizeof(this->nFiles), cipher)))
+			goto cleanup;
+		if ((status = hasher.update(buff, sizeof(this->nFiles))))
+			goto cleanup;
+		fwrite(cipher, sizeof(this->nFiles), 1, fDest);
+
+		// Encrypt context information and write
+		for (const auto &entry : this->contexts)
+		{
+			Ipp8u contextBin[DESCRIPTOR_LENGTH];
+			this->packContext(entry, contextBin);
+
+			if ((status = crypt.encryptMessage(contextBin, sizeof(contextBin), cipher)))
+				goto cleanup;
+			if ((status = hasher.update(cipher, sizeof(contextBin))))
+				goto cleanup;
+			fwrite(cipher, sizeof(contextBin), 1, fDest);
+		}
+
+		// Encrypt and concat files
+		for (const auto &entry : tempNames)
+		{
+			size_t size = 0;
+			FILE *fptr = fopen(entry, "rb");
+			crypt.resetCtr();
+				
+			while (size = fread(buff, 1, BUFFER_SIZE, fptr)) {
+				if (status = crypt.encryptMessage(buff, size, cipher))
+					break;
+				if (status = hasher.update(cipher, size))
+					break;
+				fwrite(cipher, size, 1, fDest);
+			}
+			fclose(fptr);
+
+			this->progress += 0.5 / this->nFiles;
+		}
+		break;
+	}
+	case ege::CRYPTO_METHOD::SMS4:
+	{
+		ege::SMS4_Crypt crypt(this->key, this->keyLen);
+		Ipp8u buff[BUFFER_SIZE], cipher[BUFFER_SIZE];
+		size_t sizeBuff = 0;
+
+		// First write keyword for password check
+		if (status = crypt.encryptMessage(KNOWN_WORD, 40, cipher))
+			goto cleanup;
+		fwrite(cipher, 40, 1, fDest);
+
+		// First encrypt number of files
+		memcpy(buff, &(this->nFiles), sizeof(this->nFiles));
+		if ((status = crypt.encryptMessage(buff, sizeof(this->nFiles), cipher)))
+			goto cleanup;
+		fwrite(cipher, sizeof(this->nFiles), 1, fDest);
+
+		// Encrypt context information and write
+		for (const auto &entry : this->contexts)
+		{
+			Ipp8u contextBin[DESCRIPTOR_LENGTH];
+			this->packContext(entry, contextBin);
+
+			if ((status = crypt.encryptMessage(contextBin, sizeof(contextBin), cipher)))
+				goto cleanup;
+			fwrite(cipher, sizeof(contextBin), 1, fDest);
+		}
+
+		// Encrypt and concat files
+		for (const auto &entry : tempNames)
+		{
+			size_t size = 0;
+			FILE *fptr = fopen(entry, "rb");
+
+			while (size = fread(buff, 1, BUFFER_SIZE, fptr)) {
+				if (status = crypt.encryptMessage(buff, size, cipher))
+					break;
+				if (status = hasher.update(cipher, size))
+					break;
+				fwrite(cipher, size, 1, fDest);
+			}
+
+			this->progress += 0.5 / this->nFiles;
+		}
+		break;
+	}
+	default:
+	{
+		status = CRYPT_UNKNOWN_METHOD;
+		goto cleanup;
+	}
 	}
 
+	if (status)
+		goto cleanup;
+
+	// Set hash code and write header
+	if (status = hasher.getHash(this->hashcode))
+		goto cleanup;
+	this->writeHeader(pathDest);
+
 cleanup:
-	this->progress = 100;
+	this->progress = 1;
 	
 	if (status)
-	{
 		std::filesystem::exists(pathDest) ? std::filesystem::remove(pathDest) : void();
 
+	if (this->compression_type)
+	{
 		for (const auto &entry : tempNames)
 			std::filesystem::remove(entry);
 	}
 	
 	return status;
 }
+
 
 ERR_STATUS ege::Filer::unpack(char * pathDest, bool overwrite)
 {

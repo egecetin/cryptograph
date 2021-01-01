@@ -21,7 +21,6 @@ namespace ege {
 		}
 	}
 
-
 	inline const char* sterror(ERR_STATUS code, int id) {
 
 		const char *err;

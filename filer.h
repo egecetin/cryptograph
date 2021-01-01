@@ -9,10 +9,11 @@
 #include <cstdint>
 #include <filesystem>
 
-#define BUFFER_SIZE	 65536	//  64 kB
-#define COMP_BUFSIZ	131072	// 128 kB
-#define COMP_EXTEND	  1024	//   1 kB
-#define DESCRIPTOR_LENGTH 644  
+#define HEADER_SIZE			  74
+#define BUFFER_SIZE		   65536	//  64 kB
+#define COMP_BUFSIZ		  131072	// 128 kB
+#define COMP_EXTEND			1024	//   1 kB
+#define DESCRIPTOR_LENGTH	 644  
 
 namespace ege {
 
@@ -48,17 +49,17 @@ namespace ege {
 	{
 	public:
 		// ########### Variables ########### //
-		volatile double progress = 0; // Between 0 - 100
+		volatile double progress = 0; // Between 0 - 1
 
 		// ########### Functions ########### //
 		Filer(std::string pathSrc = std::string());
 		
 		ERR_STATUS setPath(std::string pathSrc);
 		ERR_STATUS ege::Filer::setTempPath(std::string pathTemp);
-		ERR_STATUS pack(char* pathDest = nullptr, bool overwrite = false);
-		ERR_STATUS unpack(char* pathDest = nullptr, bool overwrite = false);
-		ERR_STATUS encrypt(FILE* Src, FILE* Dest);
-		ERR_STATUS decrypt(FILE* Src, FILE* Dest);
+		ERR_STATUS pack(const char* pathDest, bool overwrite = false);
+		ERR_STATUS unpack(const char* pathDest, bool overwrite = false);
+		ERR_STATUS encrypt(FILE* Src, FILE* Dest, Ipp8u* hashcode, bool keyword);
+		ERR_STATUS decrypt(FILE* Src, FILE* Dest, bool keyword);
 		ERR_STATUS compress(FILE* Src, FILE* Dest);
 		ERR_STATUS decompress(FILE* Src, FILE* Dest);
 
@@ -111,6 +112,7 @@ namespace ege {
 		uint64_t readSize(std::filesystem::path file);
 		char* readLastWrite(const char* file);
 		size_t getNumFiles(std::filesystem::path path);
+		inline void packContext(const fileProperties context, Ipp8u* packedBin);
 	};
 
 	class LZSS_Comp

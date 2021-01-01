@@ -8,9 +8,10 @@
 
 constexpr Ipp8u KNOWN_WORD[] = "The magic words are squeamish ossifrage";
 
-#define AES_CTR_SIZE	16	// Size of ctr context in bytes
-#define SMS4_CTR_SIZE	16	// Size of ctr context in bytes
-#define MAX_HASH_LEN	64
+#define AES_CTR_SIZE		16	// Size of ctr context in bytes
+#define SMS4_CTR_SIZE		16	// Size of ctr context in bytes
+#define MAX_HASH_LEN		64
+#define MAX_HASH_MSG_LEN 65534
 
 namespace ege {
 	
@@ -31,6 +32,7 @@ namespace ege {
 		// Functions
 		AES_Crypt(Ipp8u* pkey = nullptr, size_t keyLen = 256);
 		ERR_STATUS setKey(const Ipp8u* key, size_t keyLen);
+		ERR_STATUS resetCtr(Ipp8u *ctr = nullptr, int ctrBitLen = 0);
 		ERR_STATUS encryptMessage(const Ipp8u *msg, int lenmsg, Ipp8u *ciphertext, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
 		ERR_STATUS decryptMessage(const Ipp8u *ciphertext, Ipp8u *msg, int &lenmsg, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
 		~AES_Crypt();
@@ -53,6 +55,7 @@ namespace ege {
 		// Functions
 		SMS4_Crypt(Ipp8u* pkey = nullptr, size_t keyLen = 256);
 		ERR_STATUS setKey(const Ipp8u* key, size_t keyLen);
+		ERR_STATUS resetCtr(Ipp8u *ctr = nullptr, int ctrBitLen = 0);
 		ERR_STATUS encryptMessage(const Ipp8u *msg, int lenmsg, Ipp8u *ciphertext, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
 		ERR_STATUS decryptMessage(const Ipp8u *ciphertext, Ipp8u *msg, int &lenmsg, Ipp8u *ctr = nullptr, int ctrBitLen = 0);
 		~SMS4_Crypt();
@@ -72,6 +75,7 @@ namespace ege {
 	public:
 		Hash_Coder(IppHashAlgId id);
 		ERR_STATUS update(Ipp8u* msg, size_t lenmsg);
+		ERR_STATUS calcFileHash(FILE *fptr, Ipp8u *hashCode);
 		ERR_STATUS getHash(Ipp8u *code);
 		~Hash_Coder();
 
